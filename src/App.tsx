@@ -700,7 +700,7 @@ function App() {
                     required 
                     value={signupName} 
                     onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="예: 김진우"
+                    placeholder="예: 홍길동"
                     className="sgs-input"
                   />
                 </div>
@@ -720,7 +720,7 @@ function App() {
                     type="text" 
                     value={signupSchool} 
                     onChange={(e) => setSignupSchool(e.target.value)}
-                    placeholder="예: 국악중학교"
+                    placeholder="예: 개원중"
                     className="sgs-input"
                   />
                 </div>
