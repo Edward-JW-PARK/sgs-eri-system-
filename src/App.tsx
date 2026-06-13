@@ -563,7 +563,7 @@ function App() {
                 value={adminInputPw}
                 onChange={(e) => setAdminInputPw(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
-                placeholder="비밀번호 입력 (sgs123)"
+                placeholder="비밀번호 입력"
                 className="sgs-input"
               />
             </div>
@@ -592,7 +592,7 @@ function App() {
                 value={mentorInputPw}
                 onChange={(e) => setMentorInputPw(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleMentorLogin()}
-                placeholder="비밀번호 입력 (sgsmentor)"
+                placeholder="비밀번호 입력"
                 className="sgs-input"
               />
             </div>
