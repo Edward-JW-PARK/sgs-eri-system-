@@ -1,0 +1,918 @@
+/* --- Google Fonts --- */
+:root {
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  
+  /* Color Tokens */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #121829;
+  --bg-card: rgba(22, 30, 53, 0.65);
+  --bg-card-hover: rgba(30, 41, 71, 0.8);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.3);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --accent-indigo: #6366f1;
+  --accent-purple: #a855f7;
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+  
+  /* Status Colors */
+  --status-perfect: #10b981;
+  --status-good: #3b82f6;
+  --status-normal: #eab308;
+  --status-warn: #f97316;
+  --status-danger: #ef4444;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.25);
+  --shadow-premium: 0 10px 30px -10px rgba(99, 102, 241, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.1) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(10, 14, 26, 0.95) 0px, transparent 70%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+}
+
+/* --- Layout Components --- */
+.sgs-app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sgs-header {
+  border-bottom: 1px solid var(--border-color);
+  background-color: rgba(8, 11, 22, 0.85);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.sgs-header-content {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sgs-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sgs-logo-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.sgs-logo-text-title {
+  font-weight: 800;
+  font-size: 1.125rem;
+  background: linear-gradient(135deg, #c7d2fe 0%, #f5f3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sgs-logo-subtitle {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.sgs-nav {
+  display: flex;
+  background-color: rgba(15, 23, 42, 0.9);
+  padding: 0.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  gap: 0.25rem;
+}
+
+.sgs-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sgs-nav-btn:hover {
+  color: var(--text-primary);
+}
+
+.sgs-nav-btn.active {
+  background-color: var(--accent-indigo);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+.sgs-main {
+  flex-grow: 1;
+  padding: 1.5rem 0;
+}
+
+.sgs-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background-color: rgba(8, 11, 22, 0.4);
+  padding: 1.5rem 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sgs-footer-content {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* --- Container & Grids --- */
+.sgs-container {
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.sgs-quick-banner {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.sgs-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.sgs-student-badge {
+  font-weight: 800;
+  color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.15);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.sgs-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .sgs-grid-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+  .sgs-col-3 { grid-column: span 3 / span 3; }
+  .sgs-col-4 { grid-column: span 4 / span 4; }
+  .sgs-col-5 { grid-column: span 5 / span 5; }
+  .sgs-col-6 { grid-column: span 6 / span 6; }
+  .sgs-col-7 { grid-column: span 7 / span 7; }
+  .sgs-col-8 { grid-column: span 8 / span 8; }
+  .sgs-col-9 { grid-column: span 9 / span 9; }
+  .sgs-col-12 { grid-column: span 12 / span 12; }
+}
+
+/* --- Card (Glassmorphism) --- */
+.sgs-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sgs-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-premium);
+}
+
+.sgs-card-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sgs-card-title span.indicator {
+  width: 4px;
+  height: 12px;
+  background-color: var(--accent-indigo);
+  border-radius: 2px;
+}
+
+/* --- Form Elements --- */
+.sgs-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .sgs-form-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .sgs-form-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sgs-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.sgs-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sgs-input {
+  width: 100%;
+  background: rgba(10, 14, 26, 0.6);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.sgs-input:focus {
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  background: rgba(10, 14, 26, 0.85);
+}
+
+.sgs-checkbox-group, .sgs-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.sgs-option-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sgs-option-label input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--accent-indigo);
+}
+
+/* --- Buttons --- */
+.sgs-btn-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sgs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sgs-btn-primary {
+  background: var(--accent-gradient);
+  color: white;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+}
+
+.sgs-btn-primary:hover {
+  background: var(--accent-gradient-hover);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+
+.sgs-btn-secondary {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.sgs-btn-secondary:hover {
+  background: #334155;
+  color: white;
+}
+
+.sgs-btn-accent {
+  background-color: #059669;
+  color: white;
+}
+
+.sgs-btn-accent:hover {
+  background-color: #059669e0;
+}
+
+.sgs-btn-danger {
+  background-color: #4c0519;
+  color: #fda4af;
+  border: 1px solid rgba(225, 29, 72, 0.2);
+}
+
+.sgs-btn-danger:hover {
+  background-color: #881337;
+  color: white;
+}
+
+/* --- Tables --- */
+.sgs-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.sgs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.sgs-table th, .sgs-table td {
+  padding: 0.625rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sgs-table th {
+  background-color: rgba(10, 14, 26, 0.5);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: center;
+}
+
+.sgs-table td {
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.sgs-table td.text-left {
+  text-align: left;
+}
+
+.sgs-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* --- ERI Specific Elements --- */
+.sgs-eri-header-btn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sgs-eri-tab {
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sgs-eri-tab.active {
+  border-color: var(--accent-indigo);
+  color: var(--text-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.sgs-score-badge {
+  font-size: 0.7rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sgs-score-badge.perfect { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.sgs-score-badge.good { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.sgs-score-badge.warn { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+.sgs-preset-banner {
+  background-color: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sgs-preset-btns {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.sgs-preset-btn {
+  padding: 0.25rem 0.5rem;
+  background: #1e293b;
+  border: 1px solid var(--border-color);
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sgs-preset-btn:hover {
+  border-color: var(--accent-indigo);
+  color: white;
+}
+
+/* ERI input item */
+.sgs-input-item-row {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  margin-bottom: 1rem;
+}
+
+.sgs-input-item-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sgs-input-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sgs-input-item-info {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sgs-input-item-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 0.375rem;
+}
+
+.sgs-input-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sgs-input-target-box {
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid var(--border-color);
+  padding: 0.125rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sgs-input-target-box input {
+  width: 2.25rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.sgs-item-score-value {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--accent-indigo);
+}
+
+.sgs-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sgs-range-slider {
+  flex-grow: 1;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.sgs-slider-num-input {
+  width: 6rem;
+  background: rgba(10, 14, 26, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.375rem 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.sgs-slider-num-input input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  text-align: right;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.sgs-slider-num-input span {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 0.25rem;
+}
+
+.sgs-item-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* --- Circular Chart --- */
+.sgs-circle-chart-container {
+  position: relative;
+  width: 10rem;
+  height: 10rem;
+  margin: 0 auto 1.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sgs-circle-chart-text {
+  position: absolute;
+  text-align: center;
+}
+
+.sgs-circle-chart-score {
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  display: block;
+}
+
+.sgs-circle-chart-label {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+/* --- ERI Progress Bars --- */
+.sgs-progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sgs-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sgs-progress-item-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.sgs-progress-item-name {
+  color: var(--text-secondary);
+}
+
+.sgs-progress-item-value {
+  color: var(--text-muted);
+}
+
+.sgs-progress-item-value b {
+  color: white;
+}
+
+.sgs-progress-track {
+  width: 100%;
+  height: 0.5rem;
+  background-color: #0f1322;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.sgs-progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.sgs-progress-bar.high { background: linear-gradient(90deg, #10b981, #059669); }
+.sgs-progress-bar.mid { background: linear-gradient(90deg, #6366f1, #a855f7); }
+.sgs-progress-bar.low { background: linear-gradient(90deg, #ef4444, #f97316); }
+
+/* Status tags styling */
+.sgs-status-tag {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.sgs-status-tag.perfect { color: #34d399; background-color: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.15); }
+.sgs-status-tag.good { color: #60a5fa; background-color: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.15); }
+.sgs-status-tag.normal { color: #facc15; background-color: rgba(234, 179, 8, 0.08); border-color: rgba(234, 179, 8, 0.15); }
+.sgs-status-tag.warn { color: #fb923c; background-color: rgba(249, 115, 22, 0.08); border-color: rgba(249, 115, 22, 0.15); }
+.sgs-status-tag.danger { color: #f87171; background-color: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.15); }
+
+/* --- Clinic & Diagnostics --- */
+.sgs-diagnostic-box {
+  padding: 1rem;
+  border-radius: 10px;
+  background-color: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.sgs-prescription-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sgs-prescription-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.sgs-prescription-num {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.sgs-mentor-tip-banner {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border-color);
+  display: flex;
+  gap: 1rem;
+}
+
+.sgs-mentor-tip-banner h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sgs-mentor-tip-banner p {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* --- A4 Print Styles --- */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+    font-size: 10.5pt !important;
+    line-height: 1.25 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  :root {
+    --text-primary: black !important;
+    --text-secondary: #222222 !important;
+    --text-muted: #555555 !important;
+    --border-color: #222222 !important;
+    --bg-card: white !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .sgs-card {
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+  }
+  
+  /* Reset grid layouts to fit in A4 print */
+  .grid, .sgs-grid-12, .sgs-form-grid-3, .sgs-form-grid-2 {
+    display: block !important;
+  }
+  
+  .sgs-col-3, .sgs-col-4, .sgs-col-5, .sgs-col-6, .sgs-col-7, .sgs-col-8, .sgs-col-9, .sgs-col-12 {
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+  
+  /* Print-friendly tables */
+  .sgs-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .sgs-table th, .sgs-table td {
+    border: 1px solid black !important;
+    padding: 4px 6px !important;
+    color: black !important;
+    background: transparent !important;
+    font-size: 9pt !important;
+    text-align: center !important;
+  }
+  
+  .sgs-table th {
+    font-weight: bold !important;
+    background-color: #f2f2f2 !important;
+  }
+  
+  .sgs-table td.text-left {
+    text-align: left !important;
+  }
+
+  /* Form spacing in print */
+  .sgs-form-group {
+    margin-bottom: 8px !important;
+  }
+  
+  .sgs-input {
+    border: none !important;
+    border-bottom: 1px solid black !important;
+    border-radius: 0px !important;
+    background: transparent !important;
+    padding: 2px 0 !important;
+    color: black !important;
+  }
+
+  /* Checkboxes */
+  input[type="checkbox"], input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border: 1px solid black !important;
+    border-radius: 0px !important;
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
+    margin-right: 4px;
+    background: transparent !important;
+  }
+
+  input[type="checkbox"]:checked::after, input[type="radio"]:checked::after {
+    content: "✓";
+    font-size: 10px;
+    font-weight: bold;
+    position: absolute;
+    top: -4px;
+    left: 1px;
+    color: black !important;
+  }
+}
