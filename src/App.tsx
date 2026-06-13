@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LayoutGrid, ClipboardCheck, Sliders, Sparkles, BookOpen, Lock, LogOut, Shield, User, Users, Info, Trash2, Edit } from 'lucide-react';
-import type { SubjectKey, SubjectEri, StudentProfile } from './types';
+import type { SubjectKey, SubjectEri, StudentProfile, SchoolType } from './types';
 import { DEFAULT_ERI_DATA } from './types';
 import { DailyChecklist } from './components/DailyChecklist';
 import { EriInput } from './components/EriInput';
@@ -17,6 +17,7 @@ const DEFAULT_STUDENT: StudentProfile = {
   id: 'default_kim',
   name: '김진우',
   school: '국악중학교',
+  schoolType: '일반고',
   grade: '3학년',
   studentPhone: '010-1234-5678',
   parentPhone: '010-8765-4321',
@@ -24,6 +25,118 @@ const DEFAULT_STUDENT: StudentProfile = {
   examName: '중3 1학기 기말고사 대비',
   dDay: 'D-18',
   password: '1234'
+};
+
+/**
+ * 학교 유형 난이도에 따른 ERI 세부 영역별 목표치(target) 동적 보정 헬퍼 함수
+ */
+const getAdjustedTarget = (
+  subjectKey: string,
+  areaKey: string,
+  baseTarget: number,
+  schoolType?: SchoolType
+): number => {
+  const type = schoolType || '일반고';
+  if (type === '일반고') return baseTarget;
+
+  // 수학 보정
+  if (subjectKey === 'math') {
+    if (type === '특목고' || type === '자사고') {
+      if (['concept', 'basic', 'applied', 'school_material', 'wrong_answers'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'hardcore') return baseTarget + 2; // 3회독 -> 5회독
+      if (areaKey === 'test_set') return baseTarget + 4; // 10회분 -> 14회분
+    } else if (type === '학군지 일반고') {
+      if (['concept', 'basic', 'applied', 'school_material', 'wrong_answers', 'hardcore'].includes(areaKey)) {
+        return baseTarget + 1; // 3회독 -> 4회독
+      }
+      if (areaKey === 'test_set') return baseTarget + 3; // 10회분 -> 13회분
+    } else if (type === '갓반고') {
+      if (['applied', 'hardcore', 'school_material', 'wrong_answers'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 2; // 10회분 -> 12회분
+    }
+  }
+
+  // 영어 보정
+  if (subjectKey === 'english') {
+    if (type === '특목고' || type === '자사고') {
+      if (areaKey === 'vocab') return baseTarget + 2; // 3회 -> 5회
+      if (['text_understanding', 'text_memorizing', 'grammar_concept', 'grammar_problems', 'school_material', 'writing_desc'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 3; // 5회분 -> 8회분
+    } else if (type === '학군지 일반고') {
+      if (areaKey === 'vocab') return baseTarget + 1; // 3회 -> 4회
+      if (['text_understanding', 'grammar_concept', 'school_material', 'writing_desc'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 2; // 5회분 -> 7회분
+    } else if (type === '갓반고') {
+      if (['vocab', 'text_understanding', 'grammar_concept', 'school_material', 'writing_desc'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 1; // 5회분 -> 6회분
+    }
+  }
+
+  // 국어 보정
+  if (subjectKey === 'korean') {
+    if (type === '특목고' || type === '자사고') {
+      if (['textbook', 'notes', 'analysis', 'grammar', 'problems', 'wrong_answers', 'writing_desc'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 2; // 5회분 -> 7회분
+    } else if (type === '학군지 일반고') {
+      if (['notes', 'analysis', 'problems', 'writing_desc'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 1; // 5회분 -> 6회분
+    } else if (type === '갓반고') {
+      if (['notes', 'analysis', 'problems'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+      if (areaKey === 'test_set') return baseTarget + 1; // 5회분 -> 6회분
+    }
+  }
+
+  // 과학 보정
+  if (subjectKey === 'science') {
+    if (type === '특목고' || type === '자사고') {
+      if (['concept', 'formulas', 'experiments', 'basic_problems', 'applied_problems', 'school_material', 'wrong_answers'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+    } else if (type === '학군지 일반고') {
+      if (['formulas', 'experiments', 'applied_problems', 'wrong_answers'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+    } else if (type === '갓반고') {
+      if (['formulas', 'experiments', 'applied_problems'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+    }
+  }
+
+  // 사회 보정
+  if (subjectKey === 'social') {
+    if (type === '특목고' || type === '자사고') {
+      if (['concept', 'structure', 'data_analysis', 'memorizing', 'problems', 'school_material', 'wrong_answers'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+    } else if (type === '학군지 일반고') {
+      if (['structure', 'data_analysis', 'memorizing', 'wrong_answers'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+    } else if (type === '갓반고') {
+      if (['structure', 'data_analysis', 'memorizing'].includes(areaKey)) {
+        return baseTarget + 1;
+      }
+    }
+  }
+
+  return baseTarget;
 };
 
 function App() {
@@ -42,6 +155,7 @@ function App() {
   const [signupId, setSignupId] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupSchool, setSignupSchool] = useState('');
+  const [signupSchoolType, setSignupSchoolType] = useState<SchoolType>('일반고');
   const [signupGrade, setSignupGrade] = useState('3학년');
   const [signupStudentPhone, setSignupStudentPhone] = useState('');
   const [signupParentPhone, setSignupParentPhone] = useState('');
@@ -91,6 +205,7 @@ function App() {
             id: item.id,
             name: item.name,
             school: item.school || '',
+            schoolType: (item.school_type as SchoolType) || '일반고',
             grade: item.grade || '',
             studentPhone: item.student_phone || '',
             parentPhone: item.parent_phone || '',
@@ -134,48 +249,60 @@ function App() {
     }
   }, [studentList]);
 
-  // 기존 로드된 데이터의 단위와 이름을 최신 DEFAULT_ERI_DATA 기준으로 보정하는 함수
-  const migrateEriData = (loadedData: Record<SubjectKey, SubjectEri>): Record<SubjectKey, SubjectEri> => {
+  // 기존 로드된 데이터의 단위와 이름을 최신 DEFAULT_ERI_DATA 및 학교 유형 난이도 기준으로 보정하는 함수
+  const migrateEriData = (loadedData: Record<SubjectKey, SubjectEri>, schoolType?: SchoolType): Record<SubjectKey, SubjectEri> => {
     const updated = JSON.parse(JSON.stringify(loadedData)) as Record<SubjectKey, SubjectEri>;
     (Object.keys(DEFAULT_ERI_DATA) as SubjectKey[]).forEach(subKey => {
       if (!updated[subKey]) {
-        updated[subKey] = JSON.parse(JSON.stringify(DEFAULT_ERI_DATA[subKey]));
+        // 디폴트 데이터를 복사하고 타겟을 학교 유형에 맞춰 보정
+        const baseSub = JSON.parse(JSON.stringify(DEFAULT_ERI_DATA[subKey])) as SubjectEri;
+        baseSub.areas = baseSub.areas.map(area => ({
+          ...area,
+          target: getAdjustedTarget(subKey, area.key, area.target, schoolType)
+        }));
+        updated[subKey] = baseSub;
         return;
       }
       
       const defaultSub = DEFAULT_ERI_DATA[subKey];
       updated[subKey].areas = defaultSub.areas.map(defaultArea => {
         const existingArea = updated[subKey].areas.find(a => a.key === defaultArea.key);
+        const adjustedTarget = getAdjustedTarget(subKey, defaultArea.key, defaultArea.target, schoolType);
         if (existingArea) {
-          const needsFix = existingArea.unit === '문항' || existingArea.unit === '문장' || existingArea.name !== defaultArea.name;
+          const needsFix = existingArea.unit === '문항' || existingArea.unit === '문장' || existingArea.name !== defaultArea.name || existingArea.target !== adjustedTarget;
           return {
             ...existingArea,
             name: defaultArea.name,
             unit: defaultArea.unit,
-            target: defaultArea.target,
+            target: adjustedTarget,
             description: defaultArea.description,
-            current: needsFix ? Math.min(defaultArea.target, existingArea.current) : existingArea.current
+            current: needsFix ? Math.min(adjustedTarget, existingArea.current) : existingArea.current
           };
         }
-        return defaultArea;
+        return {
+          ...defaultArea,
+          target: adjustedTarget
+        };
       });
     });
     return updated;
   };
 
   // 3. 선택 학생 변경 시 ERI 데이터 로드
-  const loadLocalEriData = (studentId: string) => {
+  const loadLocalEriData = (studentId: string, schoolType?: SchoolType) => {
     const savedEri = localStorage.getItem(`sgs_eri_data_${studentId}`);
     if (savedEri) {
       try {
         const parsed = JSON.parse(savedEri);
-        const migrated = migrateEriData(parsed);
+        const migrated = migrateEriData(parsed, schoolType);
         setEriData(migrated);
       } catch (e) {
-        setEriData(DEFAULT_ERI_DATA);
+        const adjustedDefault = migrateEriData(DEFAULT_ERI_DATA, schoolType);
+        setEriData(adjustedDefault);
       }
     } else {
-      setEriData(DEFAULT_ERI_DATA);
+      const adjustedDefault = migrateEriData(DEFAULT_ERI_DATA, schoolType);
+      setEriData(adjustedDefault);
     }
   };
 
@@ -183,6 +310,9 @@ function App() {
     if (!currentStudentId) return;
 
     const fetchEriData = async () => {
+      const studentProfile = studentList.find(s => s.id === currentStudentId);
+      const schoolType = studentProfile?.schoolType;
+
       if (isSupabaseConfigured && supabase) {
         try {
           const { data, error } = await supabase
@@ -191,22 +321,22 @@ function App() {
             .eq('student_id', currentStudentId);
           
           if (!error && data && data.length > 0) {
-            const migrated = migrateEriData(data[0].eri_json);
+            const migrated = migrateEriData(data[0].eri_json, schoolType);
             setEriData(migrated);
           } else {
             // DB에 없으면 로컬 데이터 조회 후 기본 세팅
-            loadLocalEriData(currentStudentId);
+            loadLocalEriData(currentStudentId, schoolType);
           }
         } catch (e) {
-          loadLocalEriData(currentStudentId);
+          loadLocalEriData(currentStudentId, schoolType);
         }
       } else {
-        loadLocalEriData(currentStudentId);
+        loadLocalEriData(currentStudentId, schoolType);
       }
     };
 
     fetchEriData();
-  }, [currentStudentId]);
+  }, [currentStudentId, studentList]);
 
   // 4. ERI 데이터 저장 함수
   const saveEriData = async (updated: Record<SubjectKey, SubjectEri>) => {
@@ -303,6 +433,7 @@ function App() {
       id: signupId.trim(),
       name: signupName.trim(),
       school: signupSchool.trim(),
+      schoolType: signupSchoolType,
       grade: signupGrade,
       studentPhone: signupStudentPhone.trim(),
       parentPhone: signupParentPhone.trim(),
@@ -311,6 +442,9 @@ function App() {
       examName: '기말고사비',
       dDay: 'D-14'
     };
+
+    // 학교 유형별로 보정된 기본 ERI 데이터 생성
+    const adjustedDefaultEri = migrateEriData(DEFAULT_ERI_DATA, newStudent.schoolType);
 
     // 2. 가입 실행
     if (isSupabaseConfigured && supabase) {
@@ -321,6 +455,7 @@ function App() {
             id: newStudent.id,
             name: newStudent.name,
             school: newStudent.school,
+            school_type: newStudent.schoolType,
             grade: newStudent.grade,
             student_phone: newStudent.studentPhone,
             parent_phone: newStudent.parentPhone,
@@ -332,13 +467,13 @@ function App() {
 
         if (error) throw error;
         
-        // ERI 기본값 생성
+        // 보정된 ERI 기본값 생성
         await supabase
           .from('sgs_eri_data')
           .insert([{
             student_id: newStudent.id,
             subject_key: 'all',
-            eri_json: DEFAULT_ERI_DATA
+            eri_json: adjustedDefaultEri
           }]);
 
       } catch (err: any) {
@@ -352,7 +487,7 @@ function App() {
     const updated = [...studentList, newStudent];
     setStudentList(updated);
     localStorage.setItem('sgs_student_profiles', JSON.stringify(updated));
-    localStorage.setItem(`sgs_eri_data_${newStudent.id}`, JSON.stringify(DEFAULT_ERI_DATA));
+    localStorage.setItem(`sgs_eri_data_${newStudent.id}`, JSON.stringify(adjustedDefaultEri));
 
     alert(`[${newStudent.name}] 학생 회원가입이 완료되었습니다!\n이제 로그인할 수 있습니다.`);
     
@@ -360,6 +495,7 @@ function App() {
     setSignupId('');
     setSignupName('');
     setSignupSchool('');
+    setSignupSchoolType('일반고');
     setSignupGrade('3학년');
     setSignupStudentPhone('');
     setSignupParentPhone('');
@@ -380,13 +516,28 @@ function App() {
     setStudentList(updated);
     localStorage.setItem('sgs_student_profiles', JSON.stringify(updated));
 
+    // 학교 유형 변경 시 기존 ERI 목표 데이터도 새 난이도 기준으로 보정하여 강제 업데이트
+    let currentEri = DEFAULT_ERI_DATA;
+    const localSaved = localStorage.getItem(`sgs_eri_data_${editingStudent.id}`);
+    if (localSaved) {
+      try {
+        currentEri = JSON.parse(localSaved);
+      } catch (e) {
+        currentEri = DEFAULT_ERI_DATA;
+      }
+    }
+    const updatedEri = migrateEriData(currentEri, editingStudent.schoolType);
+    localStorage.setItem(`sgs_eri_data_${editingStudent.id}`, JSON.stringify(updatedEri));
+
     if (isSupabaseConfigured && supabase) {
       try {
+        // 학생 프로필 정보 업데이트
         await supabase
           .from('sgs_students')
           .update({
             name: editingStudent.name,
             school: editingStudent.school,
+            school_type: editingStudent.schoolType,
             grade: editingStudent.grade,
             student_phone: editingStudent.studentPhone,
             parent_phone: editingStudent.parentPhone,
@@ -396,6 +547,17 @@ function App() {
             d_day: editingStudent.dDay
           })
           .eq('id', editingStudent.id);
+
+        // 변경된 타겟 반영하여 ERI 데이터도 재저장
+        await supabase
+          .from('sgs_eri_data')
+          .upsert({
+            student_id: editingStudent.id,
+            subject_key: 'all',
+            eri_json: updatedEri,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'student_id,subject_key' });
+
       } catch (err) {
         console.error('Supabase 수정 실패:', err);
       }
@@ -725,6 +887,21 @@ function App() {
                   />
                 </div>
                 <div className="sgs-form-group">
+                  <label className="sgs-label">학교 유형 난이도</label>
+                  <select 
+                    value={signupSchoolType} 
+                    onChange={(e) => setSignupSchoolType(e.target.value as SchoolType)}
+                    className="sgs-input"
+                    style={{ fontWeight: 'bold' }}
+                  >
+                    <option value="일반고">일반고 (기본)</option>
+                    <option value="갓반고">갓반고 (학업 우수 일반고)</option>
+                    <option value="학군지 일반고">학군지 일반고 (강남/목동 등)</option>
+                    <option value="자사고">자사고 (자율형 사립고)</option>
+                    <option value="특목고">특목고 (외고/과학고 등)</option>
+                  </select>
+                </div>
+                <div className="sgs-form-group">
                   <label className="sgs-label">학년 선택</label>
                   <select 
                     value={signupGrade} 
@@ -957,7 +1134,29 @@ function App() {
                             {student.name} <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>({student.id})</span>
                           </td>
                           <td>
-                            <span style={{ fontSize: '0.75rem' }}>{student.school || '-'} / {student.grade || '-'}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.75rem' }}>{student.school || '-'} / {student.grade || '-'}</span>
+                              <span style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 'bold',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: student.schoolType === '특목고' ? 'rgba(239, 68, 68, 0.15)' :
+                                            student.schoolType === '자사고' ? 'rgba(249, 115, 22, 0.15)' :
+                                            student.schoolType === '학군지 일반고' ? 'rgba(168, 85, 247, 0.15)' :
+                                            student.schoolType === '갓반고' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(75, 85, 99, 0.15)',
+                                color: student.schoolType === '특목고' ? '#ef4444' :
+                                       student.schoolType === '자사고' ? '#f97316' :
+                                       student.schoolType === '학군지 일반고' ? '#a855f7' :
+                                       student.schoolType === '갓반고' ? '#6366f1' : '#9ca3af',
+                                border: student.schoolType === '특목고' ? '1px solid rgba(239, 68, 68, 0.3)' :
+                                        student.schoolType === '자사고' ? '1px solid rgba(249, 115, 22, 0.3)' :
+                                        student.schoolType === '학군지 일반고' ? '1px solid rgba(168, 85, 247, 0.3)' :
+                                        student.schoolType === '갓반고' ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(75, 85, 99, 0.3)'
+                              }}>
+                                {student.schoolType || '일반고'}
+                              </span>
+                            </div>
                           </td>
                           <td style={{ fontSize: '0.75rem' }}>{student.studentPhone || '-'}</td>
                           <td style={{ fontSize: '0.75rem' }}>{student.parentPhone || '-'}</td>
@@ -1055,6 +1254,21 @@ function App() {
                           onChange={(e) => setEditingStudent({ ...editingStudent, school: e.target.value })}
                           className="sgs-input" 
                         />
+                      </div>
+                      <div className="sgs-form-group">
+                        <label className="sgs-label">학교 유형 난이도</label>
+                        <select 
+                          value={editingStudent.schoolType || '일반고'} 
+                          onChange={(e) => setEditingStudent({ ...editingStudent, schoolType: e.target.value as SchoolType })}
+                          className="sgs-input"
+                          style={{ fontWeight: 'bold' }}
+                        >
+                          <option value="일반고">일반고 (기본)</option>
+                          <option value="갓반고">갓반고 (학업 우수 일반고)</option>
+                          <option value="학군지 일반고">학군지 일반고 (강남/목동 등)</option>
+                          <option value="자사고">자사고 (자율형 사립고)</option>
+                          <option value="특목고">특목고 (외고/과학고 등)</option>
+                        </select>
                       </div>
                       <div className="sgs-form-group">
                         <label className="sgs-label">학년</label>

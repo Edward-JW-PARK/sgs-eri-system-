@@ -1,9 +1,12 @@
 export type SubjectKey = 'math' | 'english' | 'korean' | 'science' | 'social';
 
+export type SchoolType = '특목고' | '자사고' | '학군지 일반고' | '갓반고' | '일반고';
+
 export interface StudentProfile {
   id: string;          // 영문/숫자 아이디
   name: string;        // 학생 이름 (한글)
   school?: string;     // 학교
+  schoolType?: SchoolType; // 학교 유형 (특목고, 자사고, 학군지 일반고, 갓반고, 일반고)
   grade?: string;      // 학년
   studentPhone?: string; // 학생 연락처
   parentPhone?: string;  // 부모님 연락처
