@@ -5,10 +5,11 @@ import { DEFAULT_ERI_DATA } from './types';
 import { DailyChecklist } from './components/DailyChecklist';
 import { EriInput } from './components/EriInput';
 import { EriDashboard } from './components/EriDashboard';
+import { LandingPage } from './components/LandingPage';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 type TabType = 'dashboard' | 'input' | 'checklist' | 'admin_students';
-type RoleType = 'portal' | 'admin' | 'mentor' | 'student';
+type RoleType = 'landing' | 'portal' | 'admin' | 'mentor' | 'student';
 
 const ADMIN_PASSWORD = 'sgs123';
 const MENTOR_PASSWORD = 'sgsmentor';
@@ -168,7 +169,7 @@ const getAdjustedTarget = (
 
 function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
-  const [userRole, setUserRole] = useState<RoleType>('portal');
+  const [userRole, setUserRole] = useState<RoleType>('landing');
   const [loggedInStudentId, setLoggedInStudentId] = useState<string>('');
   
   // 로그인 폼 상태
@@ -820,6 +821,11 @@ function App() {
       </div>
     );
   };
+
+  // ===================== [0. 랜딩페이지] =====================
+  if (userRole === 'landing') {
+    return <LandingPage onEnterPortal={() => setUserRole('portal')} />;
+  }
 
   // ===================== [1. 로그인 포털 화면] =====================
   if (userRole === 'portal') {
