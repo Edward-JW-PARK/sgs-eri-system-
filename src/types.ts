@@ -15,6 +15,7 @@ export interface StudentProfile {
   examName: string;    // 대비 시험
   dDay: string;        // 디데이
   examDate?: string;   // 시험 날짜 (YYYY-MM-DD)
+  isApproved?: boolean; // 가입 승인 여부
 }
 
 export interface EriArea {

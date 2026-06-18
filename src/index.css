@@ -796,6 +796,35 @@ body {
   line-height: 1.5;
 }
 
+/* --- Custom Animations for Offline Banner --- */
+@keyframes sgs-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.97;
+    transform: scale(0.995);
+  }
+}
+
+@keyframes sgs-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.sgs-pulse-animation {
+  animation: sgs-pulse 3s infinite ease-in-out;
+}
+
+.sgs-bounce-animation {
+  animation: sgs-bounce 1.5s infinite ease-in-out;
+}
+
 /* --- A4 Print Styles --- */
 @media print {
   body {

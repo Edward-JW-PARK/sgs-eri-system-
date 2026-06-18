@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutGrid, ClipboardCheck, Sliders, Sparkles, BookOpen, Lock, LogOut, Shield, User, Users, Info, Trash2, Edit } from 'lucide-react';
+import { LayoutGrid, ClipboardCheck, Sliders, Sparkles, BookOpen, Lock, LogOut, Shield, User, Users, Info, Trash2, Edit, WifiOff } from 'lucide-react';
 import type { SubjectKey, SubjectEri, StudentProfile, SchoolType } from './types';
 import { DEFAULT_ERI_DATA } from './types';
 import { DailyChecklist } from './components/DailyChecklist';
@@ -199,6 +199,7 @@ function App() {
   const [studentList, setStudentList] = useState<StudentProfile[]>([]);
   const [currentStudentId, setCurrentStudentId] = useState<string>('');
   const [eriData, setEriData] = useState<Record<SubjectKey, SubjectEri>>(DEFAULT_ERI_DATA);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // 1. 학생 목록 불러오기 (Supabase 또는 로컬 폴백)
   const loadLocalStudentList = () => {
@@ -251,19 +252,23 @@ function App() {
               password: item.password || '',
               examName: item.exam_name || '내신 대비',
               dDay: calculatedDDay,
-              examDate: examDate
+              examDate: examDate,
+              isApproved: item.is_approved !== false
             };
           });
           setStudentList(mapped);
+          setIsOfflineMode(false);
           
           // 로컬스토리지에도 동기화 (오프라인 캐싱용)
           localStorage.setItem('sgs_student_profiles', JSON.stringify(mapped));
         } else {
           console.error('Supabase 학생 목록 로드 실패, 로컬 사용:', error);
+          setIsOfflineMode(true);
           loadLocalStudentList();
         }
       } catch (e) {
         console.error('Supabase 통신 에러, 로컬 사용:', e);
+        setIsOfflineMode(true);
         loadLocalStudentList();
       }
     } else {
@@ -276,18 +281,21 @@ function App() {
     fetchStudentList();
   }, []);
 
-  // 2. 초기 기동 시 기본 선택 학생 세팅
+  // 2. 초기 기동 및 학생 목록 변경 시 현재 선택된 학생 유효성 점검
   useEffect(() => {
-    if (studentList.length > 0 && !currentStudentId) {
-      const savedCurrentId = localStorage.getItem('sgs_current_student_id');
-      if (savedCurrentId && studentList.some(p => p.id === savedCurrentId)) {
-        setCurrentStudentId(savedCurrentId);
-      } else {
-        setCurrentStudentId(studentList[0].id);
-        localStorage.setItem('sgs_current_student_id', studentList[0].id);
+    if (studentList.length > 0) {
+      const isExist = studentList.some(p => p.id === currentStudentId);
+      if (!isExist) {
+        const savedCurrentId = localStorage.getItem('sgs_current_student_id');
+        if (savedCurrentId && studentList.some(p => p.id === savedCurrentId)) {
+          setCurrentStudentId(savedCurrentId);
+        } else {
+          setCurrentStudentId(studentList[0].id);
+          localStorage.setItem('sgs_current_student_id', studentList[0].id);
+        }
       }
     }
-  }, [studentList]);
+  }, [studentList, currentStudentId]);
 
   // 기존 로드된 데이터의 단위와 이름을 최신 DEFAULT_ERI_DATA 및 학교 유형 난이도 기준으로 보정하는 함수
   const migrateEriData = (loadedData: Record<SubjectKey, SubjectEri>, schoolType?: SchoolType): Record<SubjectKey, SubjectEri> => {
@@ -497,7 +505,8 @@ function App() {
       password: signupPassword.trim(),
       examName: '기말고사 대비',
       dDay: signupExamDate ? calculateDDay(signupExamDate) : 'D-14',
-      examDate: signupExamDate
+      examDate: signupExamDate,
+      isApproved: false
     };
 
     // 학교 유형별로 보정된 기본 ERI 데이터 생성
@@ -506,7 +515,7 @@ function App() {
     // 2. 가입 실행
     if (isSupabaseConfigured && supabase) {
       try {
-        // 1차 시도: exam_date 컬럼을 포함하여 삽입
+        // 1차 시도: exam_date, is_approved 컬럼을 포함하여 삽입
         const { error } = await supabase
           .from('sgs_students')
           .insert([{
@@ -521,12 +530,13 @@ function App() {
             password: newStudent.password,
             exam_name: newStudent.examName,
             d_day: newStudent.dDay,
-            exam_date: newStudent.examDate || null
+            exam_date: newStudent.examDate || null,
+            is_approved: newStudent.isApproved
           }]);
 
         if (error) {
-          // 컬럼 부재 등 에러 발생 시, exam_date 필드를 제외하고 2차 시도 (Fallback)
-          console.warn('Supabase insert failed with exam_date, retrying without it...', error);
+          // 컬럼 부재 등 에러 발생 시, 신규 필드들을 제외하고 2차 시도 (Fallback)
+          console.warn('Supabase insert failed with new columns, retrying without them...', error);
           const { error: fallbackError } = await supabase
             .from('sgs_students')
             .insert([{
@@ -712,6 +722,36 @@ function App() {
     }
   };
 
+  // 8.5 가입 승인 토글 처리
+  const handleToggleApprove = async (id: string, approveState: boolean) => {
+    setIsLoading(true);
+    const updated = studentList.map(s => {
+      if (s.id === id) {
+        return { ...s, isApproved: approveState };
+      }
+      return s;
+    });
+    setStudentList(updated);
+    localStorage.setItem('sgs_student_profiles', JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase
+          .from('sgs_students')
+          .update({ is_approved: approveState })
+          .eq('id', id);
+
+        if (error) {
+          console.warn('Supabase update is_approved failed, skipping DB update for this field...', error);
+        }
+      } catch (e) {
+        console.error('Supabase 승인 업데이트 실패:', e);
+      }
+    }
+    setIsLoading(false);
+    alert(approveState ? '가입 승인이 완료되었습니다!' : '가입 승인이 취소되었습니다.');
+  };
+
   // 9. 로그인 처리 분기
   const handleAdminLogin = () => {
     if (adminInputPw === ADMIN_PASSWORD) {
@@ -741,6 +781,10 @@ function App() {
 
     const student = studentList.find(s => s.id === studentInputId.trim());
     if (student && student.password === studentInputPw.trim()) {
+      if (student.isApproved === false) {
+        alert('아직 관리자(원장님)의 가입 승인이 완료되지 않았습니다!\n학원에 가입 승인 여부를 문의해 주세요.');
+        return;
+      }
       setUserRole('student');
       setLoggedInStudentId(student.id);
       setCurrentStudentId(student.id);
@@ -1137,6 +1181,70 @@ function App() {
 
       {/* 2. 메인 컨텐츠 영역 */}
       <main className="sgs-main">
+        {isOfflineMode && (
+          <div className="sgs-container no-print" style={{ marginBottom: '1.5rem' }}>
+            <div className="sgs-pulse-animation" style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+              color: 'white',
+              padding: '1rem 1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.4)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              gap: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="sgs-bounce-animation" style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  padding: '0.5rem',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <WifiOff size={18} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontWeight: 'bold', fontSize: '0.875rem' }}>현재 오프라인 모드로 동작 중입니다.</h4>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.4 }}>
+                    네트워크 연결 상태가 불안정하여 로컬 캐시 데이터를 사용 중입니다. 일부 실시간 데이터 동기화가 제한될 수 있습니다.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => fetchStudentList()}
+                className="sgs-btn"
+                style={{
+                  backgroundColor: 'white',
+                  color: '#ef4444',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.75rem',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 8px -1px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                연결 재시도
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* 상단 퀵 정보 서브 배너 */}
         {currentTab !== 'checklist' && currentTab !== 'admin_students' && activeStudentId && (
@@ -1243,7 +1351,15 @@ function App() {
                       {studentList.map((student) => (
                         <tr key={student.id}>
                           <td className="text-left" style={{ fontWeight: 'bold' }}>
-                            {student.name} <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>({student.id})</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span>{student.name}</span>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>({student.id})</span>
+                              {student.isApproved === false ? (
+                                <span className="sgs-status-tag danger" style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', lineHeight: '1' }}>승인 대기</span>
+                              ) : (
+                                <span className="sgs-status-tag perfect" style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', lineHeight: '1' }}>승인 완료</span>
+                              )}
+                            </div>
                           </td>
                           <td>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
@@ -1284,6 +1400,23 @@ function App() {
                             <div style={{ display: 'inline-flex', gap: '4px' }}>
                               {userRole === 'admin' ? (
                                 <>
+                                  {student.isApproved === false ? (
+                                    <button
+                                      onClick={() => handleToggleApprove(student.id, true)}
+                                      className="sgs-btn"
+                                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: 'var(--status-perfect)', borderColor: 'var(--status-perfect)', color: 'white' }}
+                                    >
+                                      승인
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleToggleApprove(student.id, false)}
+                                      className="sgs-btn sgs-btn-secondary"
+                                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                    >
+                                      승인 취소
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => {
                                       setEditingStudent({ ...student });
