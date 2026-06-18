@@ -414,7 +414,6 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
                 }}
                 className="sgs-input"
                 style={{ textAlign: 'center', fontWeight: 'bold', colorScheme: 'dark', flex: 1 }}
-                disabled={userRole === 'student'}
               />
               <span className="sgs-status-tag danger" style={{ padding: '0.5rem 0.75rem', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '60px', fontWeight: 'bold' }}>
                 {dDay}

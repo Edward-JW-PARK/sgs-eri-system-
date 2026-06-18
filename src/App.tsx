@@ -1290,7 +1290,7 @@ function App() {
               examName={currentStudent.examName}
               dDay={currentStudent.dDay}
               examDate={currentStudent.examDate}
-              onUpdateHeader={(userRole === 'admin' || userRole === 'mentor') ? handleUpdateHeader : undefined}
+              onUpdateHeader={handleUpdateHeader}
               userRole={userRole === 'admin' ? 'mentor' : userRole} // EriDashboard 에서는 어드민도 멘토의 권한을 가집니다.
               studentId={activeStudentId}
             />
