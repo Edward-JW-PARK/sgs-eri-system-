@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LayoutGrid, ClipboardCheck, Sliders, Sparkles, BookOpen, Lock, LogOut, Shield, User, Users, Info, Trash2, Edit, WifiOff } from 'lucide-react';
-import type { SubjectKey, SubjectEri, StudentProfile, SchoolType } from './types';
+import type { SubjectKey, SubjectEri, StudentProfile, SchoolType, ExamType } from './types';
 import { DEFAULT_ERI_DATA } from './types';
 import { DailyChecklist } from './components/DailyChecklist';
 import { EriInput } from './components/EriInput';
@@ -24,6 +24,7 @@ const DEFAULT_STUDENT: StudentProfile = {
   parentPhone: '010-8765-4321',
   email: 'jinwoo@sgs.com',
   examName: '중3 1학기 기말고사 대비',
+  examType: '기말고사',
   dDay: 'D-18',
   examDate: '2026-07-06',
   password: '1234'
@@ -190,6 +191,7 @@ function App() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupExamDate, setSignupExamDate] = useState('');
+  const [signupExamType, setSignupExamType] = useState<ExamType>('기말고사');
 
   // 학생 편집 모달 상태 (어드민용)
   const [showEditModal, setShowEditModal] = useState(false);
@@ -252,6 +254,7 @@ function App() {
               email: item.email || '',
               password: item.password || '',
               examName: item.exam_name || '내신 대비',
+              examType: (item.exam_type as ExamType) || '기말고사',
               dDay: calculatedDDay,
               examDate: examDate,
               isApproved: item.is_approved !== false
@@ -411,13 +414,13 @@ function App() {
     }
   };
 
-  // 5. 대비 시험명, D-Day 정보 업데이트 (어드민 / 멘토 권한)
-  const handleUpdateHeader = async (name: string, exam: string, ddayVal: string, examDateVal?: string) => {
+  // 5. 대비 시험명, D-Day 정보 업데이트 (어드민 / 멘토 / 학생)
+  const handleUpdateHeader = async (name: string, exam: string, ddayVal: string, examDateVal?: string, examTypeVal?: ExamType) => {
     if (!currentStudentId) return;
     
     const updatedList = studentList.map(student => {
       if (student.id === currentStudentId) {
-        return { ...student, name, examName: exam, dDay: ddayVal, examDate: examDateVal };
+        return { ...student, name, examName: exam, dDay: ddayVal, examDate: examDateVal, examType: examTypeVal };
       }
       return student;
     });
@@ -427,29 +430,44 @@ function App() {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        // 1차 시도: exam_date를 포함하여 업데이트
+        // 1차 시도: exam_date, exam_type을 포함하여 업데이트
         const { error } = await supabase
           .from('sgs_students')
           .update({
             name,
             exam_name: exam,
             d_day: ddayVal,
-            exam_date: examDateVal || null
+            exam_date: examDateVal || null,
+            exam_type: examTypeVal || null
           })
           .eq('id', currentStudentId);
 
         if (error) {
-          // 컬럼이 없어 실패한 것으로 간주하고 2차 시도
-          console.warn('Supabase update header failed with exam_date, retrying without it...', error);
-          const { error: fallbackError } = await supabase
+          // exam_type 컬럼이 없어 실패한 것으로 간주하고 2차 시도 (exam_type 제외)
+          console.warn('Supabase update header failed with exam_type, retrying without it...', error);
+          const { error: error2 } = await supabase
             .from('sgs_students')
             .update({
               name,
               exam_name: exam,
-              d_day: ddayVal
+              d_day: ddayVal,
+              exam_date: examDateVal || null
             })
             .eq('id', currentStudentId);
-          if (fallbackError) throw fallbackError;
+
+          if (error2) {
+            // exam_date 컬럼마저 없어서 실패한 것으로 간주하고 3차 시도 (둘 다 제외)
+            console.warn('Supabase update header failed with exam_date, retrying without both...', error2);
+            const { error: fallbackError } = await supabase
+              .from('sgs_students')
+              .update({
+                name,
+                exam_name: exam,
+                d_day: ddayVal
+              })
+              .eq('id', currentStudentId);
+            if (fallbackError) throw fallbackError;
+          }
         }
       } catch (e) {
         console.error('Supabase 헤더 정보 업데이트 실패:', e);
@@ -505,6 +523,7 @@ function App() {
       email: signupEmail.trim(),
       password: signupPassword.trim(),
       examName: '기말고사 대비',
+      examType: signupExamType,
       dDay: signupExamDate ? calculateDDay(signupExamDate) : 'D-14',
       examDate: signupExamDate,
       isApproved: false
@@ -516,7 +535,7 @@ function App() {
     // 2. 가입 실행
     if (isSupabaseConfigured && supabase) {
       try {
-        // 1차 시도: exam_date, is_approved 컬럼을 포함하여 삽입
+        // 1차 시도: exam_date, is_approved, exam_type 컬럼을 포함하여 삽입
         const { error } = await supabase
           .from('sgs_students')
           .insert([{
@@ -530,15 +549,16 @@ function App() {
             email: newStudent.email,
             password: newStudent.password,
             exam_name: newStudent.examName,
+            exam_type: newStudent.examType,
             d_day: newStudent.dDay,
             exam_date: newStudent.examDate || null,
             is_approved: newStudent.isApproved
           }]);
 
         if (error) {
-          // 컬럼 부재 등 에러 발생 시, 신규 필드들을 제외하고 2차 시도 (Fallback)
-          console.warn('Supabase insert failed with new columns, retrying without them...', error);
-          const { error: fallbackError } = await supabase
+          // exam_type 컬럼 부재 등 에러 발생 시, exam_type 제외하고 2차 시도
+          console.warn('Supabase insert failed with exam_type, retrying without it...', error);
+          const { error: error2 } = await supabase
             .from('sgs_students')
             .insert([{
               id: newStudent.id,
@@ -551,9 +571,31 @@ function App() {
               email: newStudent.email,
               password: newStudent.password,
               exam_name: newStudent.examName,
-              d_day: newStudent.dDay
+              d_day: newStudent.dDay,
+              exam_date: newStudent.examDate || null,
+              is_approved: newStudent.isApproved
             }]);
-          if (fallbackError) throw fallbackError;
+
+          if (error2) {
+            // 다른 신규 필드들(exam_date, is_approved)도 제외하고 3차 시도 (Fallback)
+            console.warn('Supabase insert failed with new columns, retrying without them...', error2);
+            const { error: fallbackError } = await supabase
+              .from('sgs_students')
+              .insert([{
+                id: newStudent.id,
+                name: newStudent.name,
+                school: newStudent.school,
+                school_type: newStudent.schoolType,
+                grade: newStudent.grade,
+                student_phone: newStudent.studentPhone,
+                parent_phone: newStudent.parentPhone,
+                email: newStudent.email,
+                password: newStudent.password,
+                exam_name: newStudent.examName,
+                d_day: newStudent.dDay
+              }]);
+            if (fallbackError) throw fallbackError;
+          }
         }
         
         // 보정된 ERI 기본값 생성
@@ -591,6 +633,7 @@ function App() {
     setSignupEmail('');
     setSignupPassword('');
     setSignupExamDate('');
+    setSignupExamType('기말고사');
     setShowSignupModal(false);
     setIsLoading(false);
   };
@@ -621,7 +664,7 @@ function App() {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        // 1차 시도: exam_date 컬럼을 포함하여 업데이트
+        // 1차 시도: exam_date, exam_type 컬럼을 포함하여 업데이트
         const { error } = await supabase
           .from('sgs_students')
           .update({
@@ -634,15 +677,16 @@ function App() {
             email: editingStudent.email,
             password: editingStudent.password,
             exam_name: editingStudent.examName,
+            exam_type: editingStudent.examType || null,
             d_day: editingStudent.dDay,
             exam_date: editingStudent.examDate || null
           })
           .eq('id', editingStudent.id);
 
         if (error) {
-          // 컬럼이 없어 실패한 것으로 간주하고 2차 시도
-          console.warn('Supabase update failed with exam_date, retrying without it...', error);
-          const { error: fallbackError } = await supabase
+          // exam_type 컬럼 부재로 실패한 것으로 가정하고 2차 시도 (exam_type 제외)
+          console.warn('Supabase update failed with exam_type, retrying without it...', error);
+          const { error: error2 } = await supabase
             .from('sgs_students')
             .update({
               name: editingStudent.name,
@@ -654,10 +698,31 @@ function App() {
               email: editingStudent.email,
               password: editingStudent.password,
               exam_name: editingStudent.examName,
-              d_day: editingStudent.dDay
+              d_day: editingStudent.dDay,
+              exam_date: editingStudent.examDate || null
             })
             .eq('id', editingStudent.id);
-          if (fallbackError) throw fallbackError;
+
+          if (error2) {
+            // 다른 신규 컬럼(exam_date)도 제외하고 3차 시도 (Fallback)
+            console.warn('Supabase update failed with exam_date, retrying without both...', error2);
+            const { error: fallbackError } = await supabase
+              .from('sgs_students')
+              .update({
+                name: editingStudent.name,
+                school: editingStudent.school,
+                school_type: editingStudent.schoolType,
+                grade: editingStudent.grade,
+                student_phone: editingStudent.studentPhone,
+                parent_phone: editingStudent.parentPhone,
+                email: editingStudent.email,
+                password: editingStudent.password,
+                exam_name: editingStudent.examName,
+                d_day: editingStudent.dDay
+              })
+              .eq('id', editingStudent.id);
+            if (fallbackError) throw fallbackError;
+          }
         }
 
         // 변경된 타겟 반영하여 ERI 데이터도 재저장
@@ -1090,6 +1155,20 @@ function App() {
                   />
                 </div>
                 <div className="sgs-form-group">
+                  <label className="sgs-label">시험 종류</label>
+                  <select 
+                    value={signupExamType} 
+                    onChange={(e) => setSignupExamType(e.target.value as ExamType)}
+                    className="sgs-input"
+                    style={{ fontWeight: 'bold' }}
+                  >
+                    <option value="중간고사">중간고사</option>
+                    <option value="기말고사">기말고사</option>
+                    <option value="수능">수능</option>
+                    <option value="모의고사">모의고사</option>
+                  </select>
+                </div>
+                <div className="sgs-form-group">
                   <label className="sgs-label">시험 날짜</label>
                   <input 
                     type="date" 
@@ -1277,7 +1356,7 @@ function App() {
 
                 <span style={{ color: 'var(--text-muted)' }}>|</span>
                 <span>대비 시험:</span>
-                <span style={{ fontWeight: 'bold', color: 'white' }}>{currentStudent.examName}</span>
+                <span style={{ fontWeight: 'bold', color: 'white' }}>{currentStudent.examName} ({currentStudent.examType || '기말고사'})</span>
                 <span style={{ color: 'var(--text-muted)' }}>|</span>
                 <span>잔여 일정:</span>
                 <span style={{ fontWeight: 'bold', color: 'var(--status-danger)' }}>{currentStudent.dDay}</span>
@@ -1296,6 +1375,7 @@ function App() {
               examName={currentStudent.examName}
               dDay={currentStudent.dDay}
               examDate={currentStudent.examDate}
+              examType={currentStudent.examType}
               onUpdateHeader={handleUpdateHeader}
               userRole={userRole === 'admin' ? 'mentor' : userRole} // EriDashboard 에서는 어드민도 멘토의 권한을 가집니다.
               studentId={activeStudentId}
@@ -1556,6 +1636,20 @@ function App() {
                           onChange={(e) => setEditingStudent({ ...editingStudent, examName: e.target.value })}
                           className="sgs-input" 
                         />
+                      </div>
+                      <div className="sgs-form-group">
+                        <label className="sgs-label">시험 종류</label>
+                        <select 
+                          value={editingStudent.examType || '기말고사'} 
+                          onChange={(e) => setEditingStudent({ ...editingStudent, examType: e.target.value as ExamType })}
+                          className="sgs-input"
+                          style={{ fontWeight: 'bold' }}
+                        >
+                          <option value="중간고사">중간고사</option>
+                          <option value="기말고사">기말고사</option>
+                          <option value="수능">수능</option>
+                          <option value="모의고사">모의고사</option>
+                        </select>
                       </div>
                       <div className="sgs-form-group">
                         <label className="sgs-label">시험 날짜 (자동 D-Day 계산)</label>

@@ -2,6 +2,8 @@ export type SubjectKey = 'math' | 'english' | 'korean' | 'science' | 'social';
 
 export type SchoolType = '특목고' | '자사고' | '학군지 일반고' | '갓반고' | '일반고';
 
+export type ExamType = '중간고사' | '기말고사' | '수능' | '모의고사';
+
 export interface StudentProfile {
   id: string;          // 영문/숫자 아이디
   name: string;        // 학생 이름 (한글)
@@ -13,6 +15,7 @@ export interface StudentProfile {
   email?: string;      // 이메일
   password?: string;   // 비밀번호
   examName: string;    // 대비 시험
+  examType?: ExamType; // 시험 종류 (중간고사, 기말고사, 수능, 모의고사)
   dDay: string;        // 디데이
   examDate?: string;   // 시험 날짜 (YYYY-MM-DD)
   isApproved?: boolean; // 가입 승인 여부

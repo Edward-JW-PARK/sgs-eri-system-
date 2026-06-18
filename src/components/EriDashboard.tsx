@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Printer, CheckCircle, Sparkles, HelpCircle, AlertCircle, TrendingUp } from 'lucide-react';
-import type { SubjectKey, SubjectEri, EriArea, EriStatus, DailyChecklistData } from '../types';
+import type { SubjectKey, SubjectEri, EriArea, EriStatus, DailyChecklistData, ExamType } from '../types';
 
 /**
  * 시험 날짜(YYYY-MM-DD) 기준 D-Day를 오늘 날짜 대비로 자동 계산하는 함수
@@ -34,7 +34,8 @@ interface EriDashboardProps {
   examName: string;
   dDay: string;
   examDate?: string;
-  onUpdateHeader?: (studentName: string, examName: string, dDay: string, examDate: string) => void;
+  examType?: ExamType;
+  onUpdateHeader?: (studentName: string, examName: string, dDay: string, examDate: string, examType: ExamType) => void;
   userRole?: 'mentor' | 'student';
   studentId: string;
 }
@@ -45,6 +46,7 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
   examName,
   dDay,
   examDate,
+  examType,
   onUpdateHeader,
   userRole = 'mentor',
   studentId
@@ -376,13 +378,13 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
       
       {/* 1. 상단 정보 헤더 (웹 화면 & 출력 공용) */}
       <div className="sgs-card mb-6" style={{ padding: '1.25rem' }}>
-        <div className="sgs-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', width: '100%' }}>
+        <div className="sgs-form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', width: '100%' }}>
           <div className="sgs-form-group">
             <label className="sgs-label">학생명</label>
             <input
               type="text"
               value={studentName}
-              onChange={(e) => onUpdateHeader?.(e.target.value, examName, dDay, examDate || '')}
+              onChange={(e) => onUpdateHeader?.(e.target.value, examName, dDay, examDate || '', examType || '기말고사')}
               className="sgs-input"
               style={{ textAlign: 'center', fontWeight: 'bold' }}
               placeholder="학생명"
@@ -394,12 +396,26 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
             <input
               type="text"
               value={examName}
-              onChange={(e) => onUpdateHeader?.(studentName, e.target.value, dDay, examDate || '')}
+              onChange={(e) => onUpdateHeader?.(studentName, e.target.value, dDay, examDate || '', examType || '기말고사')}
               className="sgs-input"
               style={{ textAlign: 'center', fontWeight: 'bold' }}
               placeholder="시험명"
               disabled={userRole === 'student'}
             />
+          </div>
+          <div className="sgs-form-group">
+            <label className="sgs-label">시험 종류</label>
+            <select
+              value={examType || '기말고사'}
+              onChange={(e) => onUpdateHeader?.(studentName, examName, dDay, examDate || '', e.target.value as ExamType)}
+              className="sgs-input"
+              style={{ textAlign: 'center', fontWeight: 'bold' }}
+            >
+              <option value="중간고사">중간고사</option>
+              <option value="기말고사">기말고사</option>
+              <option value="수능">수능</option>
+              <option value="모의고사">모의고사</option>
+            </select>
           </div>
           <div className="sgs-form-group">
             <label className="sgs-label">시험 날짜 (D-Day)</label>
@@ -410,18 +426,18 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
                 onChange={(e) => {
                   const dateVal = e.target.value;
                   const ddayVal = dateVal ? calculateDDay(dateVal) : 'D-14';
-                  onUpdateHeader?.(studentName, examName, ddayVal, dateVal);
+                  onUpdateHeader?.(studentName, examName, ddayVal, dateVal, examType || '기말고사');
                 }}
                 className="sgs-input"
                 style={{ textAlign: 'center', fontWeight: 'bold', colorScheme: 'dark', flex: 1 }}
               />
-              <span className="sgs-status-tag danger" style={{ padding: '0.5rem 0.75rem', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '60px', fontWeight: 'bold' }}>
-                {dDay}
+              <span className="sgs-status-tag danger" style={{ padding: '0.5rem 0.75rem', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '95px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                {dDay} {examType || '기말고사'}
               </span>
             </div>
           </div>
           {userRole === 'mentor' && (
-            <div className="sgs-form-group no-print" style={{ justifyContent: 'flex-end' }}>
+            <div className="sgs-form-group no-print" style={{ justifyContent: 'flex-end', minWidth: '100px' }}>
               <button
                 onClick={() => window.print()}
                 className="sgs-btn sgs-btn-primary"
