@@ -14,6 +14,7 @@ export interface StudentProfile {
   password?: string;   // 비밀번호
   examName: string;    // 대비 시험
   dDay: string;        // 디데이
+  examDate?: string;   // 시험 날짜 (YYYY-MM-DD)
 }
 
 export interface EriArea {

@@ -2,12 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Printer, CheckCircle, Sparkles, HelpCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import type { SubjectKey, SubjectEri, EriArea, EriStatus, DailyChecklistData } from '../types';
 
+/**
+ * 시험 날짜(YYYY-MM-DD) 기준 D-Day를 오늘 날짜 대비로 자동 계산하는 함수
+ */
+const calculateDDay = (examDateStr?: string): string => {
+  if (!examDateStr) return 'D-Day 설정 필요';
+  
+  const today = new Date();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const examDate = new Date(examDateStr);
+  if (isNaN(examDate.getTime())) return 'D-Day 설정 필요';
+  const examMidnight = new Date(examDate.getFullYear(), examDate.getMonth(), examDate.getDate());
+
+  const diffTime = examMidnight.getTime() - todayMidnight.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 0) {
+    return `D-${diffDays}`;
+  } else if (diffDays === 0) {
+    return 'D-Day';
+  } else {
+    return `D+${Math.abs(diffDays)}`;
+  }
+};
+
+
 interface EriDashboardProps {
   eriData: Record<SubjectKey, SubjectEri>;
   studentName: string;
   examName: string;
   dDay: string;
-  onUpdateHeader?: (studentName: string, examName: string, dDay: string) => void;
+  examDate?: string;
+  onUpdateHeader?: (studentName: string, examName: string, dDay: string, examDate: string) => void;
   userRole?: 'mentor' | 'student';
   studentId: string;
 }
@@ -17,6 +44,7 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
   studentName,
   examName,
   dDay,
+  examDate,
   onUpdateHeader,
   userRole = 'mentor',
   studentId
@@ -354,7 +382,7 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
             <input
               type="text"
               value={studentName}
-              onChange={(e) => onUpdateHeader?.(e.target.value, examName, dDay)}
+              onChange={(e) => onUpdateHeader?.(e.target.value, examName, dDay, examDate || '')}
               className="sgs-input"
               style={{ textAlign: 'center', fontWeight: 'bold' }}
               placeholder="학생명"
@@ -366,7 +394,7 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
             <input
               type="text"
               value={examName}
-              onChange={(e) => onUpdateHeader?.(studentName, e.target.value, dDay)}
+              onChange={(e) => onUpdateHeader?.(studentName, e.target.value, dDay, examDate || '')}
               className="sgs-input"
               style={{ textAlign: 'center', fontWeight: 'bold' }}
               placeholder="시험명"
@@ -374,16 +402,24 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
             />
           </div>
           <div className="sgs-form-group">
-            <label className="sgs-label">D-Day</label>
-            <input
-              type="text"
-              value={dDay}
-              onChange={(e) => onUpdateHeader?.(studentName, examName, e.target.value)}
-              className="sgs-input"
-              style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--status-danger)' }}
-              placeholder="D-14"
-              disabled={userRole === 'student'}
-            />
+            <label className="sgs-label">시험 날짜 (D-Day)</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={examDate || ''}
+                onChange={(e) => {
+                  const dateVal = e.target.value;
+                  const ddayVal = dateVal ? calculateDDay(dateVal) : 'D-14';
+                  onUpdateHeader?.(studentName, examName, ddayVal, dateVal);
+                }}
+                className="sgs-input"
+                style={{ textAlign: 'center', fontWeight: 'bold', colorScheme: 'dark', flex: 1 }}
+                disabled={userRole === 'student'}
+              />
+              <span className="sgs-status-tag danger" style={{ padding: '0.5rem 0.75rem', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '60px', fontWeight: 'bold' }}>
+                {dDay}
+              </span>
+            </div>
           </div>
           {userRole === 'mentor' && (
             <div className="sgs-form-group no-print" style={{ justifyContent: 'flex-end' }}>

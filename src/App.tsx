@@ -24,8 +24,35 @@ const DEFAULT_STUDENT: StudentProfile = {
   email: 'jinwoo@sgs.com',
   examName: '중3 1학기 기말고사 대비',
   dDay: 'D-18',
+  examDate: '2026-07-06',
   password: '1234'
 };
+
+/**
+ * 시험 날짜(YYYY-MM-DD) 기준 D-Day를 오늘 날짜 대비로 자동 계산하는 함수
+ */
+const calculateDDay = (examDateStr?: string): string => {
+  if (!examDateStr) return 'D-Day 설정 필요';
+  
+  const today = new Date();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const examDate = new Date(examDateStr);
+  if (isNaN(examDate.getTime())) return 'D-Day 설정 필요';
+  const examMidnight = new Date(examDate.getFullYear(), examDate.getMonth(), examDate.getDate());
+
+  const diffTime = examMidnight.getTime() - todayMidnight.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 0) {
+    return `D-${diffDays}`;
+  } else if (diffDays === 0) {
+    return 'D-Day';
+  } else {
+    return `D+${Math.abs(diffDays)}`;
+  }
+};
+
 
 /**
  * 학교 유형 난이도에 따른 ERI 세부 영역별 목표치(target) 동적 보정 헬퍼 함수
@@ -161,6 +188,7 @@ function App() {
   const [signupParentPhone, setSignupParentPhone] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupExamDate, setSignupExamDate] = useState('');
 
   // 학생 편집 모달 상태 (어드민용)
   const [showEditModal, setShowEditModal] = useState(false);
@@ -186,6 +214,13 @@ function App() {
     if (profiles.length === 0) {
       profiles = [DEFAULT_STUDENT];
       localStorage.setItem('sgs_student_profiles', JSON.stringify(profiles));
+    } else {
+      // 오늘 날짜 기준으로 로컬 프로필의 D-Day 최신화
+      profiles = profiles.map(p => ({
+        ...p,
+        dDay: p.examDate ? calculateDDay(p.examDate) : p.dDay
+      }));
+      localStorage.setItem('sgs_student_profiles', JSON.stringify(profiles));
     }
     setStudentList(profiles);
     return profiles;
@@ -201,19 +236,24 @@ function App() {
           .order('created_at', { ascending: true });
         
         if (!error && data) {
-          const mapped: StudentProfile[] = data.map(item => ({
-            id: item.id,
-            name: item.name,
-            school: item.school || '',
-            schoolType: (item.school_type as SchoolType) || '일반고',
-            grade: item.grade || '',
-            studentPhone: item.student_phone || '',
-            parentPhone: item.parent_phone || '',
-            email: item.email || '',
-            password: item.password || '',
-            examName: item.exam_name || '내신 대비',
-            dDay: item.d_day || 'D-14'
-          }));
+          const mapped: StudentProfile[] = data.map(item => {
+            const examDate = item.exam_date || '';
+            const calculatedDDay = examDate ? calculateDDay(examDate) : (item.d_day || 'D-14');
+            return {
+              id: item.id,
+              name: item.name,
+              school: item.school || '',
+              schoolType: (item.school_type as SchoolType) || '일반고',
+              grade: item.grade || '',
+              studentPhone: item.student_phone || '',
+              parentPhone: item.parent_phone || '',
+              email: item.email || '',
+              password: item.password || '',
+              examName: item.exam_name || '내신 대비',
+              dDay: calculatedDDay,
+              examDate: examDate
+            };
+          });
           setStudentList(mapped);
           
           // 로컬스토리지에도 동기화 (오프라인 캐싱용)
@@ -363,12 +403,12 @@ function App() {
   };
 
   // 5. 대비 시험명, D-Day 정보 업데이트 (어드민 / 멘토 권한)
-  const handleUpdateHeader = async (name: string, exam: string, ddayVal: string) => {
+  const handleUpdateHeader = async (name: string, exam: string, ddayVal: string, examDateVal?: string) => {
     if (!currentStudentId) return;
     
     const updatedList = studentList.map(student => {
       if (student.id === currentStudentId) {
-        return { ...student, name, examName: exam, dDay: ddayVal };
+        return { ...student, name, examName: exam, dDay: ddayVal, examDate: examDateVal };
       }
       return student;
     });
@@ -378,14 +418,30 @@ function App() {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase
+        // 1차 시도: exam_date를 포함하여 업데이트
+        const { error } = await supabase
           .from('sgs_students')
           .update({
             name,
             exam_name: exam,
-            d_day: ddayVal
+            d_day: ddayVal,
+            exam_date: examDateVal || null
           })
           .eq('id', currentStudentId);
+
+        if (error) {
+          // 컬럼이 없어 실패한 것으로 간주하고 2차 시도
+          console.warn('Supabase update header failed with exam_date, retrying without it...', error);
+          const { error: fallbackError } = await supabase
+            .from('sgs_students')
+            .update({
+              name,
+              exam_name: exam,
+              d_day: ddayVal
+            })
+            .eq('id', currentStudentId);
+          if (fallbackError) throw fallbackError;
+        }
       } catch (e) {
         console.error('Supabase 헤더 정보 업데이트 실패:', e);
       }
@@ -439,8 +495,9 @@ function App() {
       parentPhone: signupParentPhone.trim(),
       email: signupEmail.trim(),
       password: signupPassword.trim(),
-      examName: '기말고사비',
-      dDay: 'D-14'
+      examName: '기말고사 대비',
+      dDay: signupExamDate ? calculateDDay(signupExamDate) : 'D-14',
+      examDate: signupExamDate
     };
 
     // 학교 유형별로 보정된 기본 ERI 데이터 생성
@@ -449,6 +506,7 @@ function App() {
     // 2. 가입 실행
     if (isSupabaseConfigured && supabase) {
       try {
+        // 1차 시도: exam_date 컬럼을 포함하여 삽입
         const { error } = await supabase
           .from('sgs_students')
           .insert([{
@@ -462,10 +520,30 @@ function App() {
             email: newStudent.email,
             password: newStudent.password,
             exam_name: newStudent.examName,
-            d_day: newStudent.dDay
+            d_day: newStudent.dDay,
+            exam_date: newStudent.examDate || null
           }]);
 
-        if (error) throw error;
+        if (error) {
+          // 컬럼 부재 등 에러 발생 시, exam_date 필드를 제외하고 2차 시도 (Fallback)
+          console.warn('Supabase insert failed with exam_date, retrying without it...', error);
+          const { error: fallbackError } = await supabase
+            .from('sgs_students')
+            .insert([{
+              id: newStudent.id,
+              name: newStudent.name,
+              school: newStudent.school,
+              school_type: newStudent.schoolType,
+              grade: newStudent.grade,
+              student_phone: newStudent.studentPhone,
+              parent_phone: newStudent.parentPhone,
+              email: newStudent.email,
+              password: newStudent.password,
+              exam_name: newStudent.examName,
+              d_day: newStudent.dDay
+            }]);
+          if (fallbackError) throw fallbackError;
+        }
         
         // 보정된 ERI 기본값 생성
         await supabase
@@ -501,6 +579,7 @@ function App() {
     setSignupParentPhone('');
     setSignupEmail('');
     setSignupPassword('');
+    setSignupExamDate('');
     setShowSignupModal(false);
     setIsLoading(false);
   };
@@ -531,8 +610,8 @@ function App() {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        // 학생 프로필 정보 업데이트
-        await supabase
+        // 1차 시도: exam_date 컬럼을 포함하여 업데이트
+        const { error } = await supabase
           .from('sgs_students')
           .update({
             name: editingStudent.name,
@@ -544,9 +623,31 @@ function App() {
             email: editingStudent.email,
             password: editingStudent.password,
             exam_name: editingStudent.examName,
-            d_day: editingStudent.dDay
+            d_day: editingStudent.dDay,
+            exam_date: editingStudent.examDate || null
           })
           .eq('id', editingStudent.id);
+
+        if (error) {
+          // 컬럼이 없어 실패한 것으로 간주하고 2차 시도
+          console.warn('Supabase update failed with exam_date, retrying without it...', error);
+          const { error: fallbackError } = await supabase
+            .from('sgs_students')
+            .update({
+              name: editingStudent.name,
+              school: editingStudent.school,
+              school_type: editingStudent.schoolType,
+              grade: editingStudent.grade,
+              student_phone: editingStudent.studentPhone,
+              parent_phone: editingStudent.parentPhone,
+              email: editingStudent.email,
+              password: editingStudent.password,
+              exam_name: editingStudent.examName,
+              d_day: editingStudent.dDay
+            })
+            .eq('id', editingStudent.id);
+          if (fallbackError) throw fallbackError;
+        }
 
         // 변경된 타겟 반영하여 ERI 데이터도 재저장
         await supabase
@@ -938,6 +1039,16 @@ function App() {
                     className="sgs-input"
                   />
                 </div>
+                <div className="sgs-form-group">
+                  <label className="sgs-label">시험 날짜</label>
+                  <input 
+                    type="date" 
+                    value={signupExamDate} 
+                    onChange={(e) => setSignupExamDate(e.target.value)}
+                    className="sgs-input"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', justifyContent: 'flex-end' }}>
@@ -1070,6 +1181,7 @@ function App() {
               studentName={currentStudent.name}
               examName={currentStudent.examName}
               dDay={currentStudent.dDay}
+              examDate={currentStudent.examDate}
               onUpdateHeader={(userRole === 'admin' || userRole === 'mentor') ? handleUpdateHeader : undefined}
               userRole={userRole === 'admin' ? 'mentor' : userRole} // EriDashboard 에서는 어드민도 멘토의 권한을 가집니다.
               studentId={activeStudentId}
@@ -1307,13 +1419,27 @@ function App() {
                         />
                       </div>
                       <div className="sgs-form-group">
-                        <label className="sgs-label">D-Day</label>
-                        <input 
-                          type="text" 
-                          value={editingStudent.dDay} 
-                          onChange={(e) => setEditingStudent({ ...editingStudent, dDay: e.target.value })}
-                          className="sgs-input" 
-                        />
+                        <label className="sgs-label">시험 날짜 (자동 D-Day 계산)</label>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <input 
+                            type="date" 
+                            value={editingStudent.examDate || ''} 
+                            onChange={(e) => {
+                              const dateVal = e.target.value;
+                              const ddayVal = dateVal ? calculateDDay(dateVal) : 'D-14';
+                              setEditingStudent({ 
+                                ...editingStudent, 
+                                examDate: dateVal, 
+                                dDay: ddayVal 
+                              });
+                            }}
+                            className="sgs-input" 
+                            style={{ colorScheme: 'dark', flex: 1 }}
+                          />
+                          <span className="sgs-status-tag danger" style={{ padding: '0.5rem 0.75rem', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '70px', fontWeight: 'bold' }}>
+                            {editingStudent.dDay}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
