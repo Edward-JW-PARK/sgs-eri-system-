@@ -10,9 +10,10 @@ interface EriInputProps {
 }
 
 const MATH_PRESETS = {
-  general: { basic: 2, applied: 2, hardcore: 1, school_material: 2, wrong_answers: 2, test_set: 5 },
-  high: { basic: 2, applied: 3, hardcore: 2, school_material: 3, wrong_answers: 2, test_set: 8 },
-  gangnam: { basic: 2, applied: 3, hardcore: 3, school_material: 3, wrong_answers: 3, test_set: 10 }
+  general: { concept: 2, basic: 2, applied: 2, hardcore: 1, school_material: 2, wrong_answers: 2, test_set: 5 },
+  high: { concept: 2, basic: 2, applied: 3, hardcore: 2, school_material: 3, wrong_answers: 2, test_set: 8 },
+  gangnam: { concept: 2, basic: 2, applied: 3, hardcore: 3, school_material: 3, wrong_answers: 3, test_set: 10 },
+  medical: { concept: 3, basic: 3, applied: 4, hardcore: 5, school_material: 3, wrong_answers: 4, test_set: 15 }
 };
 
 export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 'mentor' }) => {
@@ -70,7 +71,7 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
     setLocalData(updated);
   };
 
-  const applyPreset = (presetType: 'general' | 'high' | 'gangnam') => {
+  const applyPreset = (presetType: 'general' | 'high' | 'gangnam' | 'medical') => {
     if (activeTab !== 'math') return;
     
     const updated = { ...localData };
@@ -90,7 +91,8 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
     setLocalData(updated);
     alert(`수학 과목에 [${
       presetType === 'general' ? '일반 학교' : 
-      presetType === 'high' ? '상위권 학교' : '강남권/고난도 학교'
+      presetType === 'high' ? '상위권 학교' : 
+      presetType === 'gangnam' ? '강남권/고난도 학교' : '의대/메디컬 초극강'
     }] 최상위권 기준이 적용되었습니다!`);
   };
 
@@ -172,15 +174,28 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
                 수학 최상위권 기준 설정 프리셋:
               </span>
               <div className="sgs-preset-btns">
-                {(['general', 'high', 'gangnam'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => applyPreset(type)}
-                    className="sgs-preset-btn"
-                  >
-                    {type === 'general' ? '일반학교' : type === 'high' ? '상위권학교' : '강남/고난도'}
-                  </button>
-                ))}
+                {(['general', 'high', 'gangnam', 'medical'] as const).map((type) => {
+                  const isMedical = type === 'medical';
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => applyPreset(type)}
+                      className={`sgs-preset-btn ${isMedical ? 'medical-btn' : ''}`}
+                      style={isMedical ? {
+                        background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                        border: '1px solid #f87171',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        boxShadow: '0 0 10px rgba(239, 68, 68, 0.4)',
+                        padding: '0.3rem 0.8rem'
+                      } : undefined}
+                    >
+                      {type === 'general' ? '일반학교' : 
+                       type === 'high' ? '상위권학교' : 
+                       type === 'gangnam' ? '강남/고난도' : '🔥 의대/메디컬'}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
