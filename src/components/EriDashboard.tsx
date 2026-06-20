@@ -824,7 +824,7 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
         <div className="no-print sgs-mentor-tip-banner">
           <HelpCircle className="text-indigo-400" size={20} style={{ flexShrink: 0 }} />
           <div>
-            <h4>💡 대장님을 위한 ERI 리포트 발송 가이드</h4>
+            <h4>💡 원장님을 위한 ERI 리포트 발송 가이드</h4>
             <p>
               학생들의 평상시 "일일 체크지" 작성 정보와 멘토들의 피드백을 기반으로 ERI 값을 업데이트해 두시면, 주말이나 보강 기간에 학부모님께 과학적인 숫자로 준비율을 브리핑해 드릴 수 있습니다.
               우측의 <b>[학부모 카톡복사]</b> 버튼을 누르면 정갈하게 요약된 문구와 최근 7일 학습 성실도 평균치(PAI 점수, 순공 시간, 문제 풀이 수)가 함께 복사되어 전송 준비를 마칩니다!

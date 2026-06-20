@@ -208,10 +208,10 @@ export const DailyChecklist: React.FC<DailyChecklistProps> = ({ studentId, stude
       <div className="no-print sgs-quick-banner" style={{ padding: '1rem 1.5rem' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            SGS 초간단 일일 학습 체크지 작성
+            SGS 일일 학습 체크지 작성
           </h2>
           <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-            * 대장님! 작성 후 [인쇄 모드]로 확인하고 인쇄(Ctrl+P)를 누르면 A4 용지 한 장에 딱 맞게 출력됩니다.
+            * 원장님! 작성 후 [인쇄 모드]로 확인하고 인쇄(Ctrl+P)를 누르면 A4 용지 한 장에 딱 맞게 출력됩니다.
           </p>
         </div>
         
@@ -256,7 +256,7 @@ export const DailyChecklist: React.FC<DailyChecklistProps> = ({ studentId, stude
         {/* 타이틀 헤더 */}
         <div className="text-center" style={{ paddingBottom: '1rem', marginBottom: '1.25rem', borderBottom: '2px solid var(--border-color)' }}>
           <h1 className="font-extrabold" style={{ fontSize: '1.75rem', margin: 0, color: isPrintPreview ? 'black' : 'white' }}>
-            SGS 초간단 일일 학습 체크지
+            SGS 일일 학습 체크지
           </h1>
           <p style={{ fontSize: '0.75rem', margin: '4px 0 0 0', color: 'var(--text-secondary)' }}>
             SGS Academy Daily Learning Checklist

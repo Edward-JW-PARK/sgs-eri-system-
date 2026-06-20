@@ -124,7 +124,7 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
           </h2>
           <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
             {userRole === 'mentor' 
-              ? '* 대장님, 각 영역별 슬라이더를 움직이거나 직접 입력하여 학생의 현재 시험대비 진행도를 기록해 주세요.'
+              ? '* 원장님, 각 영역별 슬라이더를 움직이거나 직접 입력하여 학생의 현재 시험대비 진행도를 기록해 주세요.'
               : '* 각 영역별 슬라이더를 움직이거나 직접 입력하여 현재 시험대비 진행도를 스스로 기록하고 저장해 주세요.'}
           </p>
         </div>
