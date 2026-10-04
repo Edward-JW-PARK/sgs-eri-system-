@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Printer, CheckCircle, Sparkles, HelpCircle, AlertCircle, TrendingUp } from 'lucide-react';
-import type { SubjectKey, SubjectEri, EriArea, EriStatus, DailyChecklistData, ExamType } from '../types';
+import { Copy, Printer, CheckCircle, Sparkles, HelpCircle, AlertCircle, TrendingUp, Compass } from 'lucide-react';
+import type { SubjectKey, SubjectEri, EriArea, EriStatus, DailyChecklistData, ExamType, StudyLevel } from '../types';
+import { STUDY_LEVEL_CONFIGS } from '../types';
 
 /**
  * 시험 날짜(YYYY-MM-DD) 기준 D-Day를 오늘 날짜 대비로 자동 계산하는 함수
@@ -35,7 +36,9 @@ interface EriDashboardProps {
   dDay: string;
   examDate?: string;
   examType?: ExamType;
+  studyLevel?: StudyLevel;
   onUpdateHeader?: (studentName: string, examName: string, dDay: string, examDate: string, examType: ExamType) => void;
+  onChangeStudyLevel?: (newLevel: StudyLevel) => void;
   userRole?: 'mentor' | 'student';
   studentId: string;
 }
@@ -47,7 +50,9 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
   dDay,
   examDate,
   examType,
+  studyLevel = 'intermediate',
   onUpdateHeader,
+  onChangeStudyLevel,
   userRole = 'mentor',
   studentId
 }) => {
@@ -125,15 +130,15 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
   const volumeBonus = getVolumeBonus(avgSolved);
   const totalBonus = paiBonus + volumeBonus;
 
-  // 영역별 점수 계산
+  // 영역별 점수 계산 (면제 영역은 0점 처리, 총합 배점 기준 충족)
   const calculateAreaScore = (area: EriArea): number => {
-    if (area.target <= 0) return 0;
+    if (area.target <= 0 || area.isExempt) return 0;
     return Math.min(area.weight, parseFloat(((area.weight * area.current) / area.target).toFixed(1)));
   };
 
-  // 영역별 달성도(%) 계산
+  // 영역별 달성도(%) 계산 (면제 영역은 100% 달성으로 간주)
   const calculateAreaPercentage = (area: EriArea): number => {
-    if (area.target <= 0) return 0;
+    if (area.target <= 0 || area.isExempt) return 100;
     return Math.min(100, Math.round((area.current / area.target) * 100));
   };
 
@@ -170,9 +175,10 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
     }
   };
 
-  // 핵심 취약 영역 추출
+  // 핵심 취약 영역 추출 (면제 영역 제외!)
   const getWeakestArea = (subjectData: SubjectEri): string => {
-    const weakAreas = [...subjectData.areas]
+    const activeAreas = subjectData.areas.filter(a => !a.isExempt && a.target > 0);
+    const weakAreas = activeAreas
       .map(area => ({ area, pct: calculateAreaPercentage(area) }))
       .filter(item => item.pct < 70)
       .sort((a, b) => a.pct - b.pct);
@@ -180,16 +186,19 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
     if (weakAreas.length > 0) {
       return weakAreas[0].area.name;
     }
-    return '없음 (균형 잡힘)';
+    return '없음 (목표 완벽 소화)';
   };
 
-  // 동적 자동 진단문 생성
+  // 동적 자동 진단문 생성 (학생 맞춤형 레벨 및 완주 격려 반영)
   const generateDiagnosticText = (subKey: SubjectKey): string => {
     const subData = eriData[subKey];
     const score = calculateTotalScore(subData);
     const status = getEriStatus(score);
+    const currentSubLevel: StudyLevel = subData.studyLevel || studyLevel || 'intermediate';
+    const levelMeta = STUDY_LEVEL_CONFIGS[currentSubLevel];
     
-    const areasWithPct = subData.areas.map(area => ({
+    const activeAreas = subData.areas.filter(a => !a.isExempt && a.target > 0);
+    const areasWithPct = activeAreas.map(area => ({
       ...area,
       pct: calculateAreaPercentage(area),
       score: calculateAreaScore(area)
@@ -201,38 +210,44 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
     let baseText = '';
 
     if (score >= 90) {
-      baseText = `현재 ${subData.subjectName} ERI는 ${score}점으로 [최상위권형] 준비 상태입니다. 모든 대비 영역에서 고른 완성도를 보이고 있으며, 계획한 개념 회독과 실전 테스트가 완벽히 소화되었습니다. 시험 전까지 실수 유발 포인트를 차분히 점검하고 시간 단축 연습만 이어가면 고득점이 매우 유력합니다.`;
+      if (currentSubLevel === 'basic') {
+        baseText = `현재 ${subData.subjectName} ERI는 ${score}점으로 [${levelMeta.name}] 트랙 완주에 성공했습니다! 기초 개념 3~4회독과 기본 예제 풀이를 충실히 완주하여, 이번 시험에서 70~80점 도약이 매우 확실시됩니다. 남은 기간 동안 헷갈렸던 기본 오답만 다시 점검해 주면 완벽합니다.`;
+      } else if (currentSubLevel === 'intermediate') {
+        baseText = `현재 ${subData.subjectName} ERI는 ${score}점으로 [${levelMeta.name}] 트랙 목표를 훌륭하게 달성했습니다! 유형서 응용 회독과 학교 기출이 완벽히 장악되어 80~90점대 진입이 유력합니다.`;
+      } else {
+        baseText = `현재 ${subData.subjectName} ERI는 ${score}점으로 [${levelMeta.name}] 트랙 기준 최상위 완성도를 보이고 있습니다. 킬러/심화 회독과 실전 타임어택 모의고사가 완벽히 소화되었으며, 1등급 및 만점 달성이 매우 유력합니다.`;
+      }
     } else {
-      baseText = `현재 ${subData.subjectName} ERI는 ${score}점(${status})입니다. `;
+      baseText = `현재 ${subData.subjectName} ERI는 ${score}점(${status})으로 [${levelMeta.name}] 목표 트랙(${levelMeta.targetGoal})에 맞춰 학습 중입니다. `;
       
       if (strongAreas.length > 0) {
-        baseText += `단원 파악이나 ${strongAreas.slice(0, 2).join(', ')} 영역은 긍정적으로 진행되었으나, `;
+        baseText += `${strongAreas.slice(0, 2).join(', ')} 영역은 계획대로 순조롭게 이행되었으나, `;
       } else {
-        baseText += `전반적인 시험 준비 진행 속도가 느린 편이며, `;
+        baseText += `현재 목표치 대비 전체적인 회독 속도가 다소 더딘 편이며, `;
       }
 
       if (weakAreas.length > 0) {
         const weakNames = weakAreas.slice(0, 2).map(a => `${a.name}(달성률 ${a.pct}%)`).join(', ');
-        baseText += `최상위권의 준비 기준과 비교해 볼 때 상대적으로 ${weakNames} 영역이 많이 누락되어 보완이 시급합니다. `;
+        baseText += `현재 레벨 목표 기준 대비 ${weakNames} 영역이 아직 채워지지 않았습니다. `;
         
         if (subKey === 'math') {
-          const schoolMaterial = areasWithPct.find(a => a.key === 'school_material');
+          const conceptArea = areasWithPct.find(a => a.key === 'concept');
           const wrongAnswers = areasWithPct.find(a => a.key === 'wrong_answers');
-          if (schoolMaterial && schoolMaterial.pct < 50) {
-            baseText += `특히 학교 유인물과 교과서의 완벽한 반복이 이루어지지 않아 실제 내신 변형 문제에 취약할 수 있습니다. `;
+          if (conceptArea && conceptArea.pct < 60) {
+            baseText += `문제를 많이 푸는 것보다 개념을 확실히 설명할 수 있는 정독이 선행되어야 합니다. `;
           }
           if (wrongAnswers && wrongAnswers.pct < 50) {
-            baseText += `오답을 확실히 걸러내고 자기 힘으로 재풀이하는 훈련이 부족하여 아는 문제를 또 틀리는 실수가 반복될 염려가 있습니다. `;
+            baseText += `틀린 문제를 해설지 없이 자기 손으로 다시 풀어내는 오답 복습이 필수적입니다. `;
           }
         }
       } else {
-        baseText += `기본적인 준비 루틴은 수행되고 있으나 상위권 변별력을 가를 심화 보강과 실전 모의 테스트 훈련이 추가로 이루어져야 안정적인 1등급 도달이 가능합니다. `;
+        baseText += `기본 루틴은 안정적이므로 남은 기간 동안 계획한 회독 목표를 차분히 끝까지 마무리해 주시기 바랍니다. `;
       }
     }
 
     // 학습 태도 및 학습량에 의한 보정 분석 추가
     if (recentLogs.length > 0 && totalBonus !== 0) {
-      baseText += ` [태도/학습량 종합 진단] 최근 일평균 PAI 태도 점수 ${avgPai}점, 일평균 풀이량 ${avgSolved}문제로 측정되어 최종 ERI 지수에 ${totalBonus > 0 ? `+${totalBonus}점의 우수 보정` : `${totalBonus}점의 보완 감점`}이 반영되었습니다.`;
+      baseText += ` [성실도 보정] 최근 PAI 태도 점수 ${avgPai}점, 일평균 풀이량 ${avgSolved}문제로 측정되어 최종 완성도에 ${totalBonus > 0 ? `+${totalBonus}점 성실 가산` : `${totalBonus}점 감점`}이 반영되었습니다.`;
     }
 
     return baseText;
@@ -391,6 +406,31 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
               disabled={userRole === 'student'}
             />
           </div>
+
+          <div className="sgs-form-group">
+            <label className="sgs-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Compass size={12} className="text-indigo-400" />
+              학습 목표 트랙
+            </label>
+            <select
+              value={studyLevel}
+              onChange={(e) => onChangeStudyLevel?.(e.target.value as StudyLevel)}
+              className="sgs-input"
+              style={{ 
+                textAlign: 'center', 
+                fontWeight: 'bold', 
+                color: STUDY_LEVEL_CONFIGS[studyLevel]?.accentColor || 'white',
+                border: `1px solid ${STUDY_LEVEL_CONFIGS[studyLevel]?.accentColor || 'var(--border-color)'}55`
+              }}
+              disabled={userRole === 'student'}
+            >
+              <option value="basic">🌱 기초 빌드업 (개념/기본 완주)</option>
+              <option value="intermediate">🚀 실전 도약 (중위권/유형 정복)</option>
+              <option value="advanced">⭐ 상위 완성 (심화/1~2등급)</option>
+              <option value="top">👑 최상위 만점 (킬러/만점 트랙)</option>
+            </select>
+          </div>
+
           <div className="sgs-form-group">
             <label className="sgs-label">목표 시험</label>
             <input
@@ -541,29 +581,71 @@ export const EriDashboard: React.FC<EriDashboardProps> = ({
         
         {/* 2단계: 과목별 영역 그래프 */}
         <div className="sgs-col-6 sgs-card" style={{ minHeight: '260px' }}>
-          <h3 className="sgs-card-title">
-            <span className="indicator"></span>
-            2단계: [{currentSubjectData.subjectName}] 영역별 준비 달성도
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 className="sgs-card-title" style={{ margin: 0 }}>
+              <span className="indicator"></span>
+              2단계: [{currentSubjectData.subjectName}] 영역별 준비 달성도
+            </h3>
+            <span 
+              className="sgs-badge" 
+              style={{ 
+                fontSize: '0.75rem', 
+                padding: '3px 8px', 
+                borderRadius: '6px', 
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                color: STUDY_LEVEL_CONFIGS[currentSubjectData.studyLevel || studyLevel]?.accentColor || 'white',
+                border: `1px solid ${STUDY_LEVEL_CONFIGS[currentSubjectData.studyLevel || studyLevel]?.accentColor || 'var(--border-color)'}55`,
+                fontWeight: 'bold'
+              }}
+            >
+              {STUDY_LEVEL_CONFIGS[currentSubjectData.studyLevel || studyLevel]?.badge || '🚀 중위형'} 트랙
+            </span>
+          </div>
 
           <div className="sgs-progress-group">
             {currentSubjectData.areas.map((area) => {
+              const isExempt = area.isExempt || area.target <= 0;
               const pct = calculateAreaPercentage(area);
-              const barClass = pct >= 90 ? 'high' : pct >= 60 ? 'mid' : 'low';
+              const barClass = isExempt ? 'high' : pct >= 90 ? 'high' : pct >= 60 ? 'mid' : 'low';
               
               return (
                 <div key={area.key} className="sgs-progress-item">
                   <div className="sgs-progress-item-labels">
-                    <span className="sgs-progress-item-name">{area.name}</span>
+                    <span className="sgs-progress-item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {area.name}
+                      {isExempt && (
+                        <span style={{ 
+                          fontSize: '0.65rem', 
+                          padding: '1px 6px', 
+                          borderRadius: '4px', 
+                          background: 'rgba(16, 185, 129, 0.15)', 
+                          color: '#10b981', 
+                          fontWeight: 'bold',
+                          border: '1px solid rgba(16, 185, 129, 0.3)'
+                        }}>
+                          기초 집중 완주
+                        </span>
+                      )}
+                    </span>
                     <span className="sgs-progress-item-value">
-                      <b>{area.current}</b>/{area.target}{area.unit} 
-                      <span style={{ color: 'var(--accent-indigo)', marginLeft: '6px' }}>({pct}%)</span>
+                      {isExempt ? (
+                        <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.75rem' }}>면제 (100% 인정)</span>
+                      ) : (
+                        <>
+                          <b>{area.current}</b>/{area.target}{area.unit} 
+                          <span style={{ color: 'var(--accent-indigo)', marginLeft: '6px' }}>({pct}%)</span>
+                        </>
+                      )}
                     </span>
                   </div>
                   <div className="sgs-progress-track">
                     <div 
                       className={`sgs-progress-bar ${barClass}`}
-                      style={{ width: `${pct}%` }}
+                      style={{ 
+                        width: `${pct}%`,
+                        backgroundColor: isExempt ? '#10b981' : undefined,
+                        opacity: isExempt ? 0.7 : 1
+                      }}
                     ></div>
                   </div>
                 </div>

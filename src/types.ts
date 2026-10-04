@@ -4,11 +4,65 @@ export type SchoolType = '특목고' | '자사고' | '학군지 일반고' | '�
 
 export type ExamType = '중간고사' | '기말고사' | '수능' | '모의고사';
 
+/**
+ * 학생의 현재 학습 레벨 및 목표 트랙 (100미터 달리기 선수에게 100미터 목표 설정)
+ * basic: 기초 빌드업 (하위권/4~6등급 이하 ➔ 개념 3~4회독 + 기본/기출 집중, 심화 생략)
+ * intermediate: 실전 도약 (중위권/3~4등급 ➔ 개념 1회독 + 응용 2~3회독 + 기출/학교자료)
+ * advanced: 상위 완성 (상위권/2~3등급 ➔ 개념 1회독 + 응용 1~2회독 + 심화 1~2회독 + 실전)
+ * top: 최상위 만점 (최상위권/1등급/의치한 ➔ 개념 1회독 + 응용 1회독 + 심화 2~3회독 + 킬러 10회분+)
+ */
+export type StudyLevel = 'basic' | 'intermediate' | 'advanced' | 'top';
+
+export interface StudyLevelMeta {
+  key: StudyLevel;
+  name: string;
+  badge: string;
+  desc: string;
+  targetGoal: string;
+  accentColor: string;
+}
+
+export const STUDY_LEVEL_CONFIGS: Record<StudyLevel, StudyLevelMeta> = {
+  basic: {
+    key: 'basic',
+    name: '기초 빌드업',
+    badge: '🌱 기초형',
+    desc: '개념 3~4회독 + 기본/기출 집중 (심화/킬러 생략)',
+    targetGoal: '기초 완전 정복 ➔ 70~80점 도약',
+    accentColor: '#10b981'
+  },
+  intermediate: {
+    key: 'intermediate',
+    name: '실전 도약',
+    badge: '🚀 중위형',
+    desc: '개념 1회독 + 응용 2~3회독 + 기출/학교자료',
+    targetGoal: '중간 난이도 장악 ➔ 80~90점대 진입',
+    accentColor: '#3b82f6'
+  },
+  advanced: {
+    key: 'advanced',
+    name: '상위 완성',
+    badge: '⭐ 상위형',
+    desc: '개념 1회독 + 응용 1~2회독 + 심화 1~2회독 + 실전 점검',
+    targetGoal: '안정적 1~2등급 확보',
+    accentColor: '#8b5cf6'
+  },
+  top: {
+    key: 'top',
+    name: '최상위 만점',
+    badge: '👑 극상위형',
+    desc: '개념 1회독 + 응용 1회독 + 심화 2~3회독 + 킬러/실전 10회분+',
+    targetGoal: '전교 1등 / 1등급 만점 장악',
+    accentColor: '#f59e0b'
+  }
+};
+
 export interface StudentProfile {
   id: string;          // 영문/숫자 아이디
   name: string;        // 학생 이름 (한글)
   school?: string;     // 학교
   schoolType?: SchoolType; // 학교 유형 (특목고, 자사고, 학군지 일반고, 갓반고, 일반고)
+  studyLevel?: StudyLevel; // 학생 학습 목표 수준 (기초형, 중위형, 상위형, 극상위형)
   grade?: string;      // 학년
   studentPhone?: string; // 학생 연락처
   parentPhone?: string;  // 부모님 연락처
@@ -24,16 +78,18 @@ export interface StudentProfile {
 export interface EriArea {
   key: string;
   name: string;
-  target: number; // 최상위권 기준값 (회독수, 문제수 등)
+  target: number; // 레벨별 기준값 (회독수, 문제수 등, 0이면 해당 레벨 면제)
   current: number; // 학생 현재값
-  weight: number; // 배점
+  weight: number; // 배점 (해당 레벨에서 요구하지 않으면 0)
   unit: string; // 단위 ('회독', '회분', '문항', '%', '회')
   description: string; // 설명 및 가이드라인
+  isExempt?: boolean; // 해당 레벨에서 면제/선택 영역인지 여부
 }
 
 export interface SubjectEri {
   subjectKey: SubjectKey;
   subjectName: string;
+  studyLevel?: StudyLevel; // 과목별 맞춤 학습 레벨
   areas: EriArea[];
 }
 

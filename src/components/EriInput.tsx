@@ -1,35 +1,39 @@
 import React, { useState } from 'react';
-import { AlertCircle, Save, Award, Flame, RefreshCw } from 'lucide-react';
-import type { SubjectKey, SubjectEri, EriArea, EriStatus } from '../types';
-import { DEFAULT_ERI_DATA } from '../types';
+import { AlertCircle, Save, Award, RefreshCw, Compass } from 'lucide-react';
+import type { SubjectKey, SubjectEri, EriArea, EriStatus, StudyLevel, SchoolType } from '../types';
+import { STUDY_LEVEL_CONFIGS } from '../types';
+import { buildAreasForLevel } from '../studyLevelPresets';
 
 interface EriInputProps {
   eriData: Record<SubjectKey, SubjectEri>;
   onSave: (updatedData: Record<SubjectKey, SubjectEri>) => void;
   userRole?: 'mentor' | 'student';
+  studyLevel?: StudyLevel;
+  schoolType?: SchoolType;
 }
 
-const MATH_PRESETS = {
-  general: { concept: 2, basic: 2, applied: 2, hardcore: 1, school_material: 2, wrong_answers: 2, test_set: 5 },
-  high: { concept: 2, basic: 2, applied: 3, hardcore: 2, school_material: 3, wrong_answers: 2, test_set: 8 },
-  gangnam: { concept: 2, basic: 2, applied: 3, hardcore: 3, school_material: 3, wrong_answers: 3, test_set: 10 },
-  medical: { concept: 3, basic: 3, applied: 4, hardcore: 5, school_material: 3, wrong_answers: 4, test_set: 15 }
-};
-
-export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 'mentor' }) => {
+export const EriInput: React.FC<EriInputProps> = ({ 
+  eriData, 
+  onSave, 
+  userRole = 'mentor',
+  studyLevel = 'intermediate',
+  schoolType = '일반고'
+}) => {
   const [localData, setLocalData] = useState<Record<SubjectKey, SubjectEri>>(
     JSON.parse(JSON.stringify(eriData))
   );
   const [activeTab, setActiveTab] = useState<SubjectKey>('math');
 
+  // 영역별 점수 계산 (면제 영역은 0점 처리)
   const calculateAreaScore = (area: EriArea): number => {
-    if (area.target <= 0) return 0;
+    if (area.target <= 0 || area.isExempt) return 0;
     const rawScore = (area.weight * area.current) / area.target;
     return Math.min(area.weight, parseFloat(rawScore.toFixed(1)));
   };
 
+  // 영역별 달성도(%) 계산 (면제 영역은 100% 달성)
   const calculateAreaPercentage = (area: EriArea): number => {
-    if (area.target <= 0) return 0;
+    if (area.target <= 0 || area.isExempt) return 100;
     return Math.min(100, Math.round((area.current / area.target) * 100));
   };
 
@@ -66,40 +70,46 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
 
   const handleTargetChange = (subject: SubjectKey, areaIndex: number, val: number) => {
     const updated = { ...localData };
-    const parsedVal = Math.max(0.1, parseFloat(val.toFixed(1)));
+    const parsedVal = Math.max(0, parseFloat(val.toFixed(1)));
     updated[subject].areas[areaIndex].target = parsedVal;
     setLocalData(updated);
   };
 
-  const applyPreset = (presetType: 'general' | 'high' | 'gangnam' | 'medical') => {
-    if (activeTab !== 'math') return;
-    
+  // 학생 수준별 학습 레벨 프리셋 적용 (현재 과목 또는 전체 과목)
+  const applyLevelPreset = (targetLevel: StudyLevel, applyToAll: boolean = false) => {
     const updated = { ...localData };
-    const preset = MATH_PRESETS[presetType];
-    
-    updated.math.areas = updated.math.areas.map(area => {
-      const areaKey = area.key as keyof typeof preset;
-      if (preset[areaKey] !== undefined) {
-        return {
-          ...area,
-          target: preset[areaKey]
-        };
-      }
-      return area;
-    });
-    
-    setLocalData(updated);
-    alert(`수학 과목에 [${
-      presetType === 'general' ? '일반 학교' : 
-      presetType === 'high' ? '상위권 학교' : 
-      presetType === 'gangnam' ? '강남권/고난도 학교' : '의대/메디컬 초극강'
-    }] 최상위권 기준이 적용되었습니다!`);
+    const levelMeta = STUDY_LEVEL_CONFIGS[targetLevel];
+
+    if (applyToAll) {
+      (Object.keys(updated) as SubjectKey[]).forEach(subKey => {
+        updated[subKey].studyLevel = targetLevel;
+        updated[subKey].areas = buildAreasForLevel(
+          subKey, 
+          targetLevel, 
+          schoolType, 
+          updated[subKey].areas
+        );
+      });
+      setLocalData(updated);
+      alert(`모든 5개 과목에 [${levelMeta.name}] 맞춤 목표 및 가중치 기준이 일괄 적용되었습니다!`);
+    } else {
+      updated[activeTab].studyLevel = targetLevel;
+      updated[activeTab].areas = buildAreasForLevel(
+        activeTab, 
+        targetLevel, 
+        schoolType, 
+        updated[activeTab].areas
+      );
+      setLocalData(updated);
+      alert(`[${updated[activeTab].subjectName}] 과목에 [${levelMeta.name}] 맞춤 기준이 적용되었습니다!\n(${levelMeta.desc})`);
+    }
   };
 
   const handleReset = () => {
     if (window.confirm(`${localData[activeTab].subjectName} 과목의 입력값을 초기화하시겠습니까?`)) {
       const updated = { ...localData };
-      updated[activeTab] = JSON.parse(JSON.stringify(DEFAULT_ERI_DATA[activeTab]));
+      const currentLevel = updated[activeTab].studyLevel || studyLevel;
+      updated[activeTab].areas = buildAreasForLevel(activeTab, currentLevel, schoolType);
       setLocalData(updated);
     }
   };
@@ -166,56 +176,107 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
         {/* 입력 및 계산기 폼 영역 */}
         <div className="sgs-col-8" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           
-          {/* 수학일 경우 프리셋 제공 */}
-          {activeTab === 'math' && userRole === 'mentor' && (
-            <div className="sgs-preset-banner">
-              <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Flame size={14} className="text-purple-400" />
-                수학 최상위권 기준 설정 프리셋:
-              </span>
-              <div className="sgs-preset-btns">
-                {(['general', 'high', 'gangnam', 'medical'] as const).map((type) => {
-                  const isMedical = type === 'medical';
+          {/* 학생 학습 수준별 ERI 맞춤 프리셋 설정 (전 과목 지원) */}
+          {userRole === 'mentor' && (
+            <div className="sgs-preset-banner" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0.9rem 1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Compass size={15} className="text-indigo-400" />
+                  [{currentSubjectData.subjectName}] 학생 수준별 맞춤 기준(Target/배점) 자동 세팅:
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  * 대장님의 교육철학: 학생 실력에 딱 맞는 100미터 달리기 목표 부여
+                </span>
+              </div>
+
+              <div className="sgs-preset-btns" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {(['basic', 'intermediate', 'advanced', 'top'] as const).map((lvl) => {
+                  const meta = STUDY_LEVEL_CONFIGS[lvl];
+                  const isCurrent = (currentSubjectData.studyLevel || studyLevel) === lvl;
+
                   return (
                     <button
-                      key={type}
-                      onClick={() => applyPreset(type)}
-                      className={`sgs-preset-btn ${isMedical ? 'medical-btn' : ''}`}
-                      style={isMedical ? {
-                        background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                        border: '1px solid #f87171',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        boxShadow: '0 0 10px rgba(239, 68, 68, 0.4)',
-                        padding: '0.3rem 0.8rem'
-                      } : undefined}
+                      key={lvl}
+                      type="button"
+                      onClick={() => applyLevelPreset(lvl, false)}
+                      className={`sgs-preset-btn ${isCurrent ? 'active' : ''}`}
+                      style={{
+                        padding: '0.4rem 0.85rem',
+                        fontSize: '0.75rem',
+                        fontWeight: isCurrent ? '800' : '600',
+                        color: isCurrent ? '#ffffff' : meta.accentColor,
+                        backgroundColor: isCurrent ? meta.accentColor : 'rgba(255, 255, 255, 0.05)',
+                        border: `1px solid ${isCurrent ? meta.accentColor : `${meta.accentColor}55`}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={`${meta.desc} (${meta.targetGoal})`}
                     >
-                      {type === 'general' ? '일반학교' : 
-                       type === 'high' ? '상위권학교' : 
-                       type === 'gangnam' ? '강남/고난도' : '🔥 의대/메디컬'}
+                      {meta.badge} {meta.name}
                     </button>
                   );
                 })}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentLvl = currentSubjectData.studyLevel || studyLevel;
+                    if (window.confirm(`현재 선택된 [${STUDY_LEVEL_CONFIGS[currentLvl].name}] 기준을 국·영·수·과·사 5개 전 과목에 일괄 적용하시겠습니까?`)) {
+                      applyLevelPreset(currentLvl, true);
+                    }
+                  }}
+                  className="sgs-btn"
+                  style={{
+                    marginLeft: 'auto',
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.7rem',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    color: '#818cf8',
+                    borderRadius: '6px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  ⚡ 전 과목 일괄 적용
+                </button>
               </div>
             </div>
           )}
 
           <div className="sgs-card">
             {currentSubjectData.areas.map((area, idx) => {
+              const isExempt = area.isExempt || area.target <= 0;
               const score = calculateAreaScore(area);
               const percentage = calculateAreaPercentage(area);
               
               return (
-                <div key={area.key} className="sgs-input-item-row">
+                <div key={area.key} className="sgs-input-item-row" style={{ opacity: isExempt ? 0.75 : 1 }}>
                   <div className="sgs-input-item-header">
                     <div>
-                      <span className="sgs-input-item-info">{area.name}</span>
+                      <span className="sgs-input-item-info">
+                        {area.name}
+                        {isExempt && (
+                          <span style={{ 
+                            marginLeft: '6px', 
+                            fontSize: '0.65rem', 
+                            padding: '1px 6px', 
+                            borderRadius: '4px', 
+                            background: 'rgba(16, 185, 129, 0.15)', 
+                            color: '#10b981', 
+                            fontWeight: 'bold',
+                            border: '1px solid rgba(16, 185, 129, 0.3)'
+                          }}>
+                            🌱 기초 트랙 완주 면제
+                          </span>
+                        )}
+                      </span>
                       <span className="sgs-input-item-desc">({area.description})</span>
                     </div>
                     
                     <div className="sgs-input-item-controls">
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        배점: <span style={{ fontWeight: '600', color: 'white' }}>{area.weight}점</span>
+                        배점: <span style={{ fontWeight: '600', color: isExempt ? 'var(--text-muted)' : 'white' }}>{area.weight}점</span>
                       </span>
                       
                       {/* 입력 타겟 커스텀 조정 */}
@@ -232,7 +293,13 @@ export const EriInput: React.FC<EriInputProps> = ({ eriData, onSave, userRole = 
                       </div>
 
                       {/* 실시간 획득 점수 */}
-                      <span className="sgs-item-score-value">{score}점</span>
+                      <span className="sgs-item-score-value">
+                        {isExempt ? (
+                          <span style={{ fontSize: '0.75rem', color: '#10b981' }}>면제</span>
+                        ) : (
+                          `${score}점`
+                        )}
+                      </span>
                     </div>
                   </div>
 
