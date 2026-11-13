@@ -12,9 +12,6 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 type TabType = 'dashboard' | 'input' | 'checklist' | 'admin_students';
 type RoleType = 'landing' | 'portal' | 'admin' | 'mentor' | 'student';
 
-const ADMIN_PASSWORD = 'sgs123';
-const MENTOR_PASSWORD = 'sgsmentor';
-
 const DEFAULT_STUDENT: StudentProfile = {
   id: 'default_kim',
   name: '김진우',
@@ -748,24 +745,47 @@ function App() {
     alert(approveState ? '가입 승인이 완료되었습니다!' : '가입 승인이 취소되었습니다.');
   };
 
-  // 9. 로그인 처리 분기
-  const handleAdminLogin = () => {
-    if (adminInputPw === ADMIN_PASSWORD) {
-      setUserRole('admin');
-      setAdminInputPw('');
-      setCurrentTab('admin_students');
-    } else {
-      alert('어드민 비밀번호가 다릅니다!');
+  // 9. 로그인 처리 분기 (서버 환경변수 기반 검증)
+  const verifyStaffLogin = async (role: 'admin' | 'mentor', password: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/staff-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        alert(data?.error || '비밀번호가 다릅니다!');
+        return false;
+      }
+      return true;
+    } catch {
+      alert('서버 인증 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      return false;
     }
   };
 
-  const handleMentorLogin = () => {
-    if (mentorInputPw === MENTOR_PASSWORD) {
+  const handleAdminLogin = async () => {
+    if (!adminInputPw.trim()) {
+      alert('어드민 비밀번호를 입력해 주세요.');
+      return;
+    }
+    if (await verifyStaffLogin('admin', adminInputPw)) {
+      setUserRole('admin');
+      setAdminInputPw('');
+      setCurrentTab('admin_students');
+    }
+  };
+
+  const handleMentorLogin = async () => {
+    if (!mentorInputPw.trim()) {
+      alert('멘토 비밀번호를 입력해 주세요.');
+      return;
+    }
+    if (await verifyStaffLogin('mentor', mentorInputPw)) {
       setUserRole('mentor');
       setMentorInputPw('');
       setCurrentTab('dashboard');
-    } else {
-      alert('멘토 비밀번호가 다릅니다!');
     }
   };
 
